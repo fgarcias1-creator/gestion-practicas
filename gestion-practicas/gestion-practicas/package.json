@@ -1,0 +1,28 @@
+{
+  "name": "gestion-practicas",
+  "version": "2.0.0",
+  "description": "Backend SOA/REST de la plataforma de Gestión de Prácticas Académicas (Node.js + PostgreSQL + MongoDB)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:init": "node src/db/init.js",
+    "test": "node src/db/init.js && node tests/e2e.js",
+    "check": "node src/db/check.js",
+    "test:crud": "node src/db/init.js && node tests/crud.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

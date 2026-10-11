@@ -1,0 +1,17 @@
+# Levanta las dos bases de datos del proyecto: docker compose up -d
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: practicas_academicas
+    ports: ["5433:5432"]  # 5433 evita chocar con un PostgreSQL ya instalado en el equipo
+    volumes: [pgdata:/var/lib/postgresql/data]
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: [mongodata:/data/db]
+volumes:
+  pgdata:
+  mongodata:

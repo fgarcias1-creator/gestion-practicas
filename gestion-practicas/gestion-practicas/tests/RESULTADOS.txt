@@ -1,0 +1,83 @@
+
+> gestion-practicas@2.0.0 test
+> node src/db/init.js && node tests/e2e.js
+
+Esquema de PostgreSQL creado
+Conectado a MongoDB
+Datos de demostración cargados (contraseña de todos los usuarios: demo1234)
+
+Identidad
+  ✔ login con contraseña incorrecta → 401
+  ✔ login de los 6 perfiles devuelve JWT
+  ✔ ruta protegida sin token → 401
+  ✔ estudiante no puede listar instituciones → 403
+
+RF01 Solicitud de práctica
+  ✔ Laura no cumple requisitos → 422 con faltantes
+
+RF03 Instituciones y convenios
+  ✔ crear institución → 201
+  ✔ convenio con fin anterior al inicio → 400
+  ✔ crear convenio → estado vigente
+  ✔ filtrar convenios vencidos
+  ✔ alerta de convenio próximo a vencer
+  ✔ listado de instituciones disponibles excluye convenio vencido
+  ✔ eliminar institución (CRUD) → 204
+
+RF02 Asignación de práctica
+  ✔ listado de pendientes contiene a Fernando
+  ✔ asignar a institución sin convenio vigente → 409
+  ✔ tutor de otra institución → 409
+  ✔ asignación válida → 201 y práctica en curso
+  ✔ descuenta cupo de la institución
+  ✔ reasignar a un estudiante ya asignado → 409
+  ✔ el estudiante fue notificado
+
+RF01 (camino válido) y rechazo de solicitud
+  ✔ el director crea un estudiante → 201
+  ✔ solicitud con requisitos cumplidos → pendiente de asignación
+  ✔ solicitud duplicada → 409
+  ✔ rechazar sin motivo → 400
+  ✔ rechazar con motivo → estado rechazado
+  ✔ el estudiante recibe la notificación del rechazo
+
+RF04 Sesiones y evidencias (MongoDB)
+  ✔ enviar sin evidencia → 400
+  ✔ horas fuera de rango → 400
+  ✔ enviar sesión con evidencia → pendiente, fecha del servidor
+  ✔ guardar borrador
+  ✔ borrador se elimina
+  ✔ sesión enviada no se elimina (RNF02) → 409
+  ✔ bandeja del tutor con tiempo restante
+  ✔ otro tutor no puede validar → 403
+  ✔ rechazar sin observación → 400
+  ✔ rechazar con observación → requiere corrección
+  ✔ reenviar como nueva entrega, original conservada
+  ✔ validar con un clic → validada_tutor
+  ✔ confirmación automática de la sesión sin validar
+  ✔ queda constancia de validación automática
+
+RF05 Bitácora
+  ✔ horas acumuladas = 6+5+4+4 = 19 de 160
+  ✔ estudiante no ve la bitácora de otro → 403
+  ✔ docente consulta bitácora de su estudiante
+
+RF06 Evaluación y calificación
+  ✔ calificar sin evaluación del tutor → 409
+  ✔ evaluación con valor fuera de escala → 400
+  ✔ evaluación del tutor registrada
+  ✔ consolidado: evaluación + sesiones validadas
+  ✔ nota fuera de 0–5 → 400
+  ✔ calificación registrada → 201
+  ✔ estudiante ve su calificación
+  ✔ corrección crea registro nuevo ligado al original
+  ✔ la base de datos bloquea UPDATE sobre una calificación (trigger)
+
+RF07 Reportes y RNF03 Auditoría
+  ✔ reporte filtrado con avance de horas y nota
+  ✔ exportación CSV
+  ✔ solo el director genera reportes → 403
+  ✔ auditoría registra asignación, validación manual/automática y calificación
+  ✔ auditoría es de solo lectura (PUT → 404)
+
+Resultado: 56 correctas, 0 fallidas
