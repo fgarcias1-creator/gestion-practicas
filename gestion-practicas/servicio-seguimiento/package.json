@@ -1,0 +1,26 @@
+{
+  "name": "servicio-seguimiento",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RF04 sesiones y evidencias · RF05 bitácora · RNF01 validación en un clic · RNF02 hora del servidor · RNF03 auditoría insert-only. Base de datos: MongoDB.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "db:init": "node src/db-init.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "pdfkit": "^0.15.2",
+    "zod": "^3.23.8"
+  }
+}

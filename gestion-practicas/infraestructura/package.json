@@ -1,0 +1,16 @@
+{
+  "name": "infraestructura",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bases de datos, docker-compose y scripts del proyecto",
+  "scripts": {
+    "db:init": "node db/init.js",
+    "db:check": "node db/check.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.5.0",
+    "pg": "^8.12.0"
+  }
+}
