@@ -1,8 +1,0 @@
-CRUD de tablas básicas (API REST + verificación directa en la base de datos)
-Tabla               Motor        CREATE  READ  UPDATE  DELETE
-------------------- ------------ ------- ----- ------- -------
-usuarios            PostgreSQL     ✔      ✔     ✔       ✔  
-instituciones       PostgreSQL     ✔      ✔     ✔       ✔  
-convenios           PostgreSQL     ✔      ✔     ✔       ✔  
-sesiones_practica   MongoDB        ✔      ✔     ✔       ✔  
-Resultado: 16 de 16 operaciones correctas
