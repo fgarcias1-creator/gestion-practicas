@@ -160,3 +160,32 @@ test('Filtros (director): la búsqueda ignora tildes y mayúsculas en Institucio
   expect(screen.getByText('Clínica Santa Ana')).toBeTruthy();
   expect(screen.queryByText('Soluciones TI')).toBeNull();
 });
+
+test('Reporte (director): tablero con indicadores, filtro por estado con chips, orden y exportación CSV del estado elegido', async () => {
+  const FILAS = [
+    { asignacion_id: 1, estudiante: 'Sara En-Curso', institucion: 'Clínica Santa Ana', tutor: 'Tomás', docente: 'Diana', estado: 'en_curso', horas_acumuladas: 0, horas_requeridas: 160, avance_pct: 0, nota_final: '' },
+    { asignacion_id: 2, estudiante: 'Elena Estudiante', institucion: 'Clínica Santa Ana', tutor: 'Tomás', docente: 'Diana', estado: 'en_curso', horas_acumuladas: 11, horas_requeridas: 160, avance_pct: 7, nota_final: '' },
+    { asignacion_id: 3, estudiante: 'Carlos Final', institucion: 'Colegio Andino', tutor: 'Rita', docente: 'Diana', estado: 'calificado', horas_acumuladas: 160, horas_requeridas: 160, avance_pct: 100, nota_final: 4.6 },
+  ];
+  const llamadas = [];
+  URL.createObjectURL = vi.fn(() => 'blob:x'); URL.revokeObjectURL = vi.fn(); HTMLAnchorElement.prototype.click = vi.fn();
+  global.fetch = vi.fn((url) => {
+    llamadas.push(url);
+    if (url.includes('formato=csv')) return Promise.resolve({ ok: true, status: 200, blob: () => Promise.resolve(new Blob(['a,b'])) });
+    if (url.endsWith('/reportes/asignaciones')) return json({ total: 3, filas: FILAS });
+    return json({}, 404);
+  });
+  render(<Director seccion="reportes" />);
+  expect(await screen.findByText('Carlos Final')).toBeTruthy();
+  expect(screen.getByText('Prácticas').previousSibling.textContent).toBe('3');
+  expect(screen.getAllByText('4.6')).toHaveLength(2);                                    // nota promedio y nota de la fila
+  const filas = () => screen.getAllByRole('listitem').map((li) => within(li).getByText(/Final|En-Curso|Estudiante$/).textContent);
+  expect(filas()[0]).toBe('Carlos Final');                                               // orden por defecto: mayor avance
+  await userEvent.click(screen.getByRole('button', { name: /En curso/ }));
+  expect(screen.queryByText('Carlos Final')).toBeNull();
+  expect(screen.getByText('Mostrando 2 de 2')).toBeTruthy();
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ordenar' }), 'nombre');
+  expect(filas()).toEqual(['Elena Estudiante', 'Sara En-Curso']);
+  await userEvent.click(screen.getByRole('button', { name: /Exportar CSV/ }));
+  await waitFor(() => expect(llamadas.some((u) => u.endsWith('formato=csv&estado=en_curso'))).toBe(true));
+});

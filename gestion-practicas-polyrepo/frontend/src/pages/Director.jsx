@@ -288,26 +288,120 @@ function InstitucionesConsulta() {
   );
 }
 
-function Reportes() {
-  const [estado, setEstado] = useState('');
-  const rep = useDatos(() => api('/reportes/asignaciones' + (estado ? `?estado=${estado}` : '')), [estado]);
-  const r = rep.datos;
-  const filtros = useFiltros({ q: '' });
-  const filas = (r?.filas || []).filter((x) => coincide(x, ['estudiante', 'institucion', 'tutor', 'docente'], filtros.valores.q));
+/** Colores y nombres de cada estado de la práctica, en el orden del proceso (RF05). */
+const ETAPAS = [['asignado', 'Asignado'], ['en_curso', 'En curso'], ['evaluado', 'Evaluado'], ['calificado', 'Calificado'], ['finalizado', 'Finalizado']];
+const ORDEN = { avance: 'Mayor avance', nombre: 'Nombre (A-Z)', nota: 'Mejor nota', rezagados: 'Menor avance' };
+const iniciales = (n = '') => n.split(' ').filter(Boolean).slice(0, 2).map((x) => x[0]).join('').toUpperCase();
+const nivelNota = (n) => (n >= 4 ? 'alta' : n >= 3 ? 'media' : 'baja');
+const promedio = (xs) => (xs.length ? xs.reduce((t, x) => t + x, 0) / xs.length : null);
+
+/** Anillo de avance (SVG): muestra el porcentaje promedio de horas cumplidas. */
+function Anillo({ pct }) {
+  const r = 26; const c = 2 * Math.PI * r;
   return (
-    <Tarjeta titulo="Reporte de prácticas" acciones={<button className="sec" onClick={() => descargar('/reportes/asignaciones?formato=csv' + (estado ? `&estado=${estado}` : ''), 'reporte_practicas.csv')}>Exportar CSV</button>}>
-      <div className="filtros" role="search">
-        <div><label>Estado</label><select aria-label="Estado" value={estado} onChange={(e) => setEstado(e.target.value)}>{ESTADOS_ASIGNACION.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select></div>
-        <div className="filtro-texto"><label>Buscar</label><input type="search" aria-label="Buscar" placeholder="Estudiante, institución, tutor o docente…" value={filtros.valores.q} onChange={(e) => filtros.cambiar('q', e.target.value)} /></div>
-        <div className="filtro-pie"><span className="gris">Mostrando {filas.length} de {r?.filas.length ?? 0}</span></div>
-      </div>
-      <p className="gris">El CSV exportado respeta el filtro de estado.</p>
-      {rep.error && <p className="aviso error">{rep.error}</p>}
-      {r?.mensaje && <p className="gris">{r.mensaje}</p>}
-      <table>
-        <thead><tr><th>Estudiante</th><th>Institución</th><th>Tutor</th><th>Docente</th><th>Estado</th><th>Horas</th><th>Avance</th><th>Nota</th></tr></thead>
-        <tbody>{filas.map((f) => <tr key={f.asignacion_id}><td>{f.estudiante}</td><td>{f.institucion}</td><td>{f.tutor}</td><td>{f.docente}</td><td><Insignia estado={f.estado} /></td><td>{f.horas_acumuladas}/{f.horas_requeridas}</td><td>{f.avance_pct}%</td><td>{f.nota_final || '—'}</td></tr>)}</tbody>
-      </table>
-    </Tarjeta>
+    <svg className="anillo" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r={r} className="anillo-fondo" />
+      <circle cx="32" cy="32" r={r} className="anillo-valor" strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(100, pct) / 100)} />
+    </svg>
   );
 }
+
+/**
+ * RF07 · Reporte de prácticas como tablero: indicadores (prácticas, horas, avance y nota promedio), distribución por estado
+ * (que también filtra), búsqueda, orden y una fila por práctica con su barra de avance. El CSV respeta el estado elegido.
+ */
+function Reportes() {
+  const rep = useDatos(() => api('/reportes/asignaciones'));
+  const [estado, setEstado] = useState('');
+  const [orden, setOrden] = useState('avance');
+  const [toast, avisar] = useToast();
+  const filtros = useFiltros({ q: '' });
+  const todas = rep.datos?.filas || [];
+  const conteo = Object.fromEntries(ETAPAS.map(([k]) => [k, todas.filter((f) => f.estado === k).length]));
+  const delEstado = todas.filter((f) => !estado || f.estado === estado);
+  const filas = delEstado.filter((x) => coincide(x, ['estudiante', 'institucion', 'tutor', 'docente'], filtros.valores.q)).sort((a, b) => ({
+    avance: b.avance_pct - a.avance_pct, rezagados: a.avance_pct - b.avance_pct,
+    nota: (Number(b.nota_final) || -1) - (Number(a.nota_final) || -1), nombre: a.estudiante.localeCompare(b.estudiante, 'es'),
+  }[orden]));
+
+  // Indicadores del conjunto elegido (estado), no de la búsqueda: la búsqueda solo ubica filas
+  const horas = delEstado.reduce((t, f) => t + Number(f.horas_acumuladas || 0), 0);
+  const horasReq = delEstado.reduce((t, f) => t + Number(f.horas_requeridas || 0), 0);
+  const avance = Math.round(promedio(delEstado.map((f) => Math.min(100, f.avance_pct))) ?? 0);
+  const notas = delEstado.map((f) => Number(f.nota_final)).filter((n) => f_valida(n));
+  const notaProm = promedio(notas);
+  const exportar = () => descargar('/reportes/asignaciones?formato=csv' + (estado ? `&estado=${estado}` : ''), 'reporte_practicas.csv').catch((e) => avisar('error', e.message));
+
+  return (
+    <>
+      {toast}
+      <section className="tarjeta reporte">
+        <div className="reporte-cab">
+          <div>
+            <h3>Reporte de prácticas</h3>
+            <p className="gris">Corte al {new Date().toLocaleDateString('es-CO', { dateStyle: 'long' })} · {estado ? `Estado: ${ETAPAS.find(([k]) => k === estado)[1]}` : 'Todos los estados'}</p>
+          </div>
+          <button className="sec" onClick={exportar}>⬇ Exportar CSV</button>
+        </div>
+        {rep.error && <p className="aviso error">{rep.error}</p>}
+
+        <div className="kpis">
+          <div className="kpi"><span className="kpi-icono">🎓</span><div><b>{delEstado.length}</b><small>Prácticas</small></div></div>
+          <div className="kpi"><span className="kpi-icono">⏱</span><div><b>{horas.toLocaleString('es-CO')}<em> / {horasReq.toLocaleString('es-CO')} h</em></b><small>Horas validadas</small></div></div>
+          <div className="kpi kpi-anillo"><Anillo pct={avance} /><span className="anillo-texto">{avance}%</span><div><b>{avance}%</b><small>Avance promedio</small></div></div>
+          <div className="kpi"><span className="kpi-icono">⭐</span><div><b>{notaProm === null ? '—' : notaProm.toFixed(1)}</b><small>{notas.length ? `Nota promedio (${notas.length} calificada${notas.length > 1 ? 's' : ''})` : 'Aún sin notas finales'}</small></div></div>
+        </div>
+
+        <div className="etapas">
+          <div className="etapas-barra" aria-hidden="true">
+            {todas.length > 0 && ETAPAS.filter(([k]) => conteo[k]).map(([k]) => <span key={k} className={'seg e-' + k} style={{ flex: conteo[k] }} />)}
+          </div>
+          <div className="etapas-chips" role="group" aria-label="Filtrar por estado">
+            <button className={'chip' + (!estado ? ' activa' : '')} aria-pressed={!estado} onClick={() => setEstado('')}>Todos <b>{todas.length}</b></button>
+            {ETAPAS.map(([k, t]) => (
+              <button key={k} className={'chip' + (estado === k ? ' activa' : '')} aria-pressed={estado === k} onClick={() => setEstado(estado === k ? '' : k)}>
+                <i className={'punto e-' + k} />{t} <b>{conteo[k]}</b>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="reporte-herr">
+          <input type="search" aria-label="Buscar" placeholder="🔍  Buscar estudiante, institución, tutor o docente…" value={filtros.valores.q} onChange={(e) => filtros.cambiar('q', e.target.value)} />
+          <select aria-label="Ordenar" value={orden} onChange={(e) => setOrden(e.target.value)}>{Object.entries(ORDEN).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
+          <span className="gris">Mostrando {filas.length} de {delEstado.length}</span>
+        </div>
+
+        <div className="practicas" role="list">
+          {filas.map((f) => {
+            const pct = Math.min(100, f.avance_pct); const nota = Number(f.nota_final);
+            return (
+              <div key={f.asignacion_id} className="practica" role="listitem">
+                <span className={'avatar e-' + f.estado} aria-hidden="true">{iniciales(f.estudiante)}</span>
+                <div className="practica-quien">
+                  <b>{f.estudiante}</b>
+                  <span className="gris">🏥 {f.institucion}</span>
+                  <small className="gris">Tutor: {f.tutor} · Docente: {f.docente}</small>
+                </div>
+                <div className="practica-avance">
+                  <div className="practica-avance-txt"><span><b>{f.horas_acumuladas}</b> / {f.horas_requeridas} h</span><b>{pct}%</b></div>
+                  <div className="barra-prog"><div className={pct >= 100 ? 'completa' : ''} style={{ width: pct + '%' }} /></div>
+                </div>
+                <Insignia estado={f.estado} />
+                <div className="practica-nota">
+                  {f_valida(nota) ? <span className={'nota ' + nivelNota(nota)} title="Nota final">{nota.toFixed(1)}</span> : <span className="nota pendiente" title="Sin nota final">—</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {!rep.datos && !rep.error && <p className="gris">Cargando…</p>}
+        {rep.datos && todas.length === 0 && <div className="vacio"><span>📭</span><p>Todavía no hay prácticas asignadas.</p></div>}
+        {todas.length > 0 && filas.length === 0 && <div className="vacio"><span>🔎</span><p>Ninguna práctica coincide con el filtro.</p>
+          <button className="sec" onClick={() => { setEstado(''); filtros.limpiar(); }}>Limpiar filtros</button></div>}
+        <p className="gris reporte-pie">Las horas solo cuentan sesiones validadas por el tutor. El CSV exportado respeta el estado elegido.</p>
+      </section>
+    </>
+  );
+}
+const f_valida = (n) => typeof n === 'number' && !Number.isNaN(n) && n > 0;

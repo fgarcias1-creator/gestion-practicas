@@ -5,12 +5,14 @@ import Docente from './pages/Docente.jsx';
 const json = (data, status = 200) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(data) });
 const ASIG = [{ id: 1, estudiante_id: 3, estudiante: 'Sara En-Curso', institucion: 'Clínica Santa Ana', tutor: 'Tomás Tutor', estado: 'evaluado' }];
 const SESIONES = [
-  { _id: 's1', fecha_sesion: '2026-10-20T00:00:00Z', horas: 3, resumen_actividades: 'Soporte a usuarios' },
+  { _id: 's1', fecha_sesion: '2026-10-20T00:00:00Z', horas: 3, resumen_actividades: 'Soporte a usuarios', observacion_tutor: 'Buen trabajo en sitio',
+    evidencias: [{ archivo: 'f1.pdf', nombre_original: 'informe_semana1.pdf' }] },
   { _id: 's2', fecha_sesion: '2026-10-22T00:00:00Z', horas: 2, resumen_actividades: 'Documentación' },
 ];
 const BITACORA = { estudiante_id: 3, estado_general: 'en_curso', horas_acumuladas: 5, horas_requeridas: 160, calificacion: null,
   asignacion: { estudiante: 'Sara En-Curso', institucion: 'Clínica Santa Ana', programa: 'Ingeniería de Sistemas', tutor: 'Tomás Tutor', docente: 'Diana Docente', fecha_inicio_practica: '2026-10-01' },
-  sesiones: [{ _id: 's1', fecha_sesion: '2026-10-20T00:00:00Z', horas: 3, resumen_actividades: 'Soporte a usuarios', estado_validacion: 'validada_tutor', calificacion: null }] };
+  sesiones: [{ _id: 's1', fecha_sesion: '2026-10-20T00:00:00Z', horas: 3, resumen_actividades: 'Soporte a usuarios', estado_validacion: 'validada_tutor', calificacion: null,
+    evidencias: [{ archivo: 'f1.pdf', nombre_original: 'informe_semana1.pdf' }] }] };
 
 /** Simula el Servicio de Evaluación con estado: guarda notas, calcula el resumen y publica. */
 function simular() {
@@ -26,6 +28,7 @@ function simular() {
     if (m === 'GET' && url.endsWith('/asignaciones')) return json(ASIG);
     if (m === 'GET' && url.endsWith('/evaluaciones/1')) return json(est);
     if (m === 'GET' && url.endsWith('/bitacora/3')) return json(BITACORA);
+    if (m === 'GET' && url.endsWith('/sesiones/s1/evidencias/f1.pdf')) return Promise.resolve({ ok: true, status: 200, blob: () => Promise.resolve(new Blob(['%PDF'])) });
     if (m === 'GET' && url.endsWith('/bitacora/3/pdf')) return Promise.resolve({ ok: true, status: 200, blob: () => Promise.resolve(new Blob(['%PDF-1.4'])) });
     if (m === 'POST' && url.endsWith('/calificaciones/sesiones')) {
       est.notas_sesion = [...est.notas_sesion.filter((x) => x.sesion_id !== body.sesion_id), { sesion_id: body.sesion_id, nota: body.nota, retroalimentacion: body.retroalimentacion }];
@@ -107,4 +110,19 @@ test('RF05: el docente consulta la bitácora de su estudiante y la descarga en P
   await userEvent.click(screen.getByRole('button', { name: 'Descargar PDF' }));
   await waitFor(() => expect(llamadas.some((l) => l.url.endsWith('/bitacora/3/pdf'))).toBe(true));
   expect(URL.createObjectURL).toHaveBeenCalled();
+});
+
+test('Para calificar, el docente ve y descarga las evidencias que subió el estudiante (también en la bitácora)', async () => {
+  const llamadas = simular();
+  URL.createObjectURL = vi.fn(() => 'blob:x'); URL.revokeObjectURL = vi.fn(); HTMLAnchorElement.prototype.click = vi.fn();
+  render(<Docente />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Calificar' }));
+  await userEvent.click(await screen.findByRole('button', { name: /informe_semana1\.pdf/ }));
+  await waitFor(() => expect(llamadas.some((l) => l.url.endsWith('/sesiones/s1/evidencias/f1.pdf'))).toBe(true));
+  expect(screen.getByText(/Observación del tutor: Buen trabajo en sitio/)).toBeTruthy();
+  expect(screen.getByText('Sin evidencias')).toBeTruthy();                        // la sesión s2 no trae archivos
+  await userEvent.click(screen.getByRole('button', { name: 'Ver bitácora' }));
+  expect(await screen.findByText('Bitácora de Sara En-Curso')).toBeTruthy();
+  expect(screen.getByRole('columnheader', { name: 'Evidencias' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: /informe_semana1\.pdf/ })).toBeTruthy();
 });

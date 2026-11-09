@@ -86,3 +86,58 @@ fieldset { border:0; padding:0; margin:0; } fieldset:disabled button { opacity:.
 .check input { width:auto; }
 @keyframes entrar { from { opacity:0; transform:translateY(8px) scale(.98); } to { opacity:1; transform:none; } }
 @media (prefers-reduced-motion:reduce) { .modal.bienvenida { animation:none; } }
+
+/* Evidencias descargables (docente / director) */
+.evidencias-lista { list-style:none; padding:0; margin:0; display:inline-flex; flex-wrap:wrap; gap:.2rem .6rem; }
+.evidencias-lista button.link { color:var(--azul); padding:0; margin:0; }
+.sesion-evidencias { margin:.35rem 0; }
+
+/* ===== Reporte de prácticas (director) ===== */
+.reporte { --e-asignado:#8a94a8; --e-en_curso:#2563eb; --e-evaluado:#7c3aed; --e-calificado:#117a45; --e-finalizado:#0b3d91; padding:1.25rem 1.4rem; }
+.reporte-cab { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
+.reporte-cab h3 { margin:.1rem 0 .1rem; color:var(--azul); font-size:1.3rem; } .reporte-cab p { margin:0; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.kpi { position:relative; display:flex; align-items:center; gap:.8rem; padding:.9rem 1rem; border:1px solid var(--borde); border-radius:12px; background:linear-gradient(180deg,#fff,#f8faff); }
+.kpi b { display:block; font-size:1.55rem; line-height:1.1; color:#1b2230; } .kpi b em { font-style:normal; font-size:.85rem; color:var(--gris); font-weight:500; }
+.kpi small { color:var(--gris); font-size:.8rem; }
+.kpi-icono { width:44px; height:44px; flex:0 0 44px; display:grid; place-items:center; border-radius:12px; background:var(--azul2); font-size:1.3rem; }
+.kpi-anillo b { display:none; } .anillo { width:56px; height:56px; flex:0 0 56px; transform:rotate(-90deg); }
+.anillo circle { fill:none; stroke-width:7; } .anillo-fondo { stroke:var(--azul2); } .anillo-valor { stroke:var(--azul); stroke-linecap:round; transition:stroke-dashoffset .6s ease; }
+.anillo-texto { position:absolute; left:1rem; width:56px; text-align:center; font-weight:700; font-size:.85rem; color:var(--azul); }
+.kpi-anillo small { font-size:.85rem; color:#1b2230; font-weight:600; }
+.etapas { margin:.2rem 0 1rem; }
+.etapas-barra { display:flex; height:10px; border-radius:999px; overflow:hidden; background:#eef1f7; gap:2px; }
+.etapas-barra .seg { min-width:6px; }
+.e-asignado { background:var(--e-asignado); } .e-en_curso { background:var(--e-en_curso); } .e-evaluado { background:var(--e-evaluado); } .e-calificado { background:var(--e-calificado); } .e-finalizado { background:var(--e-finalizado); }
+.etapas-chips { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.7rem; }
+.chip { display:inline-flex; align-items:center; gap:.4rem; margin:0; padding:.35rem .75rem; border-radius:999px; background:#fff; color:#1b2230; border:1px solid var(--borde); font-size:.88rem; transition:all .15s; }
+.chip b { background:#eef1f7; border-radius:999px; padding:0 .45rem; font-size:.78rem; }
+.chip:hover { border-color:var(--azul); } .chip.activa { background:var(--azul); border-color:var(--azul); color:#fff; } .chip.activa b { background:rgba(255,255,255,.22); }
+.punto { width:9px; height:9px; border-radius:50%; display:inline-block; }
+.reporte-herr { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-bottom:.6rem; }
+.reporte-herr input { flex:1 1 280px; border-radius:999px; padding:.55rem 1rem; } .reporte-herr select { width:auto; border-radius:999px; padding:.5rem .9rem; }
+.practicas { display:flex; flex-direction:column; gap:.5rem; }
+.practica { display:grid; grid-template-columns:44px minmax(180px,1.4fr) minmax(170px,1fr) 110px 56px; align-items:center; gap:1rem; padding:.75rem 1rem; border:1px solid var(--borde); border-radius:12px; background:#fff; transition:box-shadow .15s, transform .15s; }
+.practica:hover { box-shadow:0 6px 18px rgba(11,61,145,.08); transform:translateY(-1px); }
+.avatar { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:700; font-size:.9rem; }
+.practica-quien { display:flex; flex-direction:column; min-width:0; } .practica-quien > * { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.practica-quien small { font-size:.78rem; }
+.practica-avance-txt { display:flex; justify-content:space-between; font-size:.85rem; margin-bottom:.3rem; color:var(--gris); } .practica-avance-txt b { color:#1b2230; }
+.practica .barra-prog { height:8px; } .barra-prog > div.completa { background:var(--ok); }
+.practica .insignia { justify-self:start; white-space:nowrap; }
+.practica-nota { justify-self:end; }
+.nota { display:grid; place-items:center; width:46px; height:46px; border-radius:12px; font-weight:700; font-size:1.05rem; }
+.nota.alta { background:#e6f4ec; color:var(--ok); } .nota.media { background:#fff4e0; color:var(--warn); } .nota.baja { background:#fdecea; color:var(--mal); } .nota.pendiente { background:#f1f3f8; color:#9aa2b1; }
+.vacio { text-align:center; padding:1.6rem 1rem; color:var(--gris); } .vacio span { font-size:2rem; } .vacio p { margin:.3rem 0 .6rem; }
+.reporte-pie { margin:.9rem 0 0; font-size:.82rem; }
+@media (max-width:820px) {
+  .practica { grid-template-columns:44px 1fr auto; grid-template-areas:'av quien nota' 'avance avance avance' 'estado estado estado'; gap:.5rem .8rem; }
+  .practica .avatar { grid-area:av; } .practica-quien { grid-area:quien; } .practica-nota { grid-area:nota; } .practica-avance { grid-area:avance; } .practica .insignia { grid-area:estado; }
+}
+@media (prefers-reduced-motion:reduce) { .practica, .anillo-valor, .chip { transition:none; } .practica:hover { transform:none; } }
+.reporte .insignia.asignado { background:#eef0f4; color:#5b6475; } .reporte .insignia.en_curso { background:#e6eeff; color:#1d4ed8; }
+.reporte .insignia.evaluado { background:#f1eaff; color:#6d28d9; } .reporte .insignia.finalizado { background:#e3e9f6; color:var(--azul); }
+@media (max-width:520px) {
+  .kpis { grid-template-columns:1fr 1fr; gap:.5rem; } .kpi { padding:.7rem; gap:.55rem; } .kpi b { font-size:1.25rem; }
+  .kpi-icono { width:36px; height:36px; flex-basis:36px; font-size:1.05rem; } .anillo { width:44px; height:44px; flex-basis:44px; } .anillo-texto { left:.7rem; width:44px; font-size:.72rem; }
+}

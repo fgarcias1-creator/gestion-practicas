@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api.js';
-import { useDatos, useToast, Tarjeta, Insignia, Filtros, useFiltros, coincide, fecha } from '../ui.jsx';
+import { useDatos, useToast, Tarjeta, Insignia, Filtros, useFiltros, coincide, fecha, Evidencias } from '../ui.jsx';
 import Bitacora from '../Bitacora.jsx';
 
 const ESTADOS_ASIGNACION = [['', 'Todos'], ['asignado', 'Asignado'], ['en_curso', 'En curso'], ['evaluado', 'Evaluado'], ['calificado', 'Calificado'], ['finalizado', 'Finalizado']];
@@ -127,6 +127,8 @@ function FilaSesion({ sesion: s, vigente, publicada, asignacionId, avisar, alGua
   return (
     <div className="sesion-nota">
       <div><b>{fecha(String(s.fecha_sesion).slice(0, 10))}</b> · {s.horas} h {s.validacion_automatica && <small>(confirmada automáticamente)</small>}<br />{s.resumen_actividades}</div>
+      <div className="sesion-evidencias"><span className="gris">Evidencias del estudiante:</span> <Evidencias sesion={s} alError={(m) => avisar('error', m)} /></div>
+      {s.observacion_tutor && <div className="gris">Observación del tutor: {s.observacion_tutor}</div>}
       {!editando && vigente ? (
         <p>Nota: <b>{vigente.nota}</b> — {vigente.retroalimentacion} {vigente.es_correccion && <small className="gris">(corregida)</small>}{' '}
           <button className="sec" onClick={() => setEditando(true)}>{publicada ? 'Corregir nota' : 'Cambiar nota'}</button></p>

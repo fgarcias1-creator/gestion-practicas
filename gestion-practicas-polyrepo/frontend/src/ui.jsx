@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { descargar } from './api.js';
 
 /** Carga datos de la API y expone recargar(). */
 export function useDatos(fn, deps = []) {
@@ -121,3 +122,20 @@ export function Filtros({ filtros, buscar = 'Buscar…', selects = [], fechas = 
 
 /** Estados de una sesión de la bitácora, para las listas de filtro. */
 export const ESTADOS_SESION = [['', 'Todos'], ['borrador', 'Borrador'], ['pendiente', 'Pendiente de validación'], ['validada_tutor', 'Validada por el tutor'], ['confirmada_automatica', 'Confirmada automáticamente'], ['requiere_correccion', 'Requiere corrección']];
+
+/**
+ * Evidencias de una sesión como enlaces de descarga (el servidor verifica que quien descarga tenga relación con la sesión).
+ * La usan el docente (para calificar), el director y el estudiante.
+ */
+export function Evidencias({ sesion, alError }) {
+  const lista = sesion.evidencias || [];
+  if (!lista.length) return <span className="gris">Sin evidencias</span>;
+  const bajar = (e) => descargar(`/sesiones/${sesion._id}/evidencias/${e.archivo}`, e.nombre_original || e.archivo).catch((x) => alError?.(x.message));
+  return (
+    <ul className="evidencias-lista">
+      {lista.map((e) => (
+        <li key={e.archivo}><button type="button" className="link" onClick={() => bajar(e)}>📎 {e.nombre_original || e.archivo}</button></li>
+      ))}
+    </ul>
+  );
+}

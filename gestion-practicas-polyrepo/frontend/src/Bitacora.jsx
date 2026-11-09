@@ -1,5 +1,5 @@
 import { api, descargar } from './api.js';
-import { useDatos, useToast, Tarjeta, Insignia, Pasos, Filtros, useFiltros, coincide, enRango, ESTADOS_SESION, fecha } from './ui.jsx';
+import { useDatos, useToast, Tarjeta, Insignia, Pasos, Filtros, useFiltros, coincide, enRango, ESTADOS_SESION, fecha, Evidencias } from './ui.jsx';
 
 /**
  * RF05 · «Consultar seguimiento»: bitácora de un estudiante (estado, horas, sesiones y nota) con descarga en PDF.
@@ -34,9 +34,10 @@ export default function Bitacora({ estudianteId }) {
         <Filtros filtros={filtros} buscar="Actividades o calificación…" fechas total={b.sesiones.length} mostrados={sesiones.length}
           selects={[{ k: 'estado', etiqueta: 'Estado', opciones: ESTADOS_SESION.filter(([v]) => v !== 'borrador') }]} />
         <table>
-          <thead><tr><th>Fecha</th><th>Horas</th><th>Actividades</th><th>Estado</th><th>Nota del docente</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Horas</th><th>Actividades</th><th>Evidencias</th><th>Estado</th><th>Nota del docente</th></tr></thead>
           <tbody>{sesiones.map((s) => (
             <tr key={s._id}><td>{fecha(String(s.fecha_sesion).slice(0, 10))}</td><td>{s.horas}</td><td>{s.resumen_actividades}</td>
+              <td><Evidencias sesion={s} alError={(m) => avisar('error', m)} /></td>
               <td><Insignia estado={s.estado_validacion} />{s.validacion_automatica && <small> (automática)</small>}</td>
               <td>{s.calificacion ? `${s.calificacion.nota} — ${s.calificacion.retroalimentacion}` : '—'}</td></tr>))}</tbody>
         </table>
