@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api, sesion } from './api.js';
 import { fecha } from './ui.jsx';
+import Bienvenida from './Bienvenida.jsx';
 
 /** Campana de notificaciones (asignación, sesiones validadas, calificación…). Se refresca cada 30 s. */
 function Campana() {
@@ -33,7 +34,7 @@ function Campana() {
 
 /**
  * Estructura de la aplicación: encabezado + barra lateral con las funciones del rol + contenido.
- * `menu` = [{ ruta, etiqueta, icono }]. Cada opción es una dirección (/ruta), así que se puede volver con «Atrás» y marcar como favorita.
+ * `menu` = [{ ruta, etiqueta, icono, deshabilitada?, motivo? }]. Al arrancar muestra la bienvenida (una vez por sesión). Cada opción es una dirección (/ruta), así que se puede volver con «Atrás» y marcar como favorita.
  */
 export default function Layout({ usuario, menu = [], children }) {
   const nav = useNavigate();
@@ -49,16 +50,22 @@ export default function Layout({ usuario, menu = [], children }) {
           <aside className="lateral">
             <h2>Menú</h2>
             <nav aria-label="Menú principal">
-              {menu.map((m) => (
+              {menu.map((m) => (m.deshabilitada ? (
+                // Opción inhabilitada (p. ej. «Solicitar práctica» cuando el estudiante ya tiene práctica asignada): no es un enlace.
+                <span key={m.ruta} className="deshabilitada" aria-disabled="true" title={m.motivo}>
+                  <span className="icono" aria-hidden="true">🔒</span>{m.etiqueta}
+                </span>
+              ) : (
                 <NavLink key={m.ruta} to={'/' + m.ruta} className={({ isActive }) => (isActive ? 'activa' : '')}>
                   <span className="icono" aria-hidden="true">{m.icono}</span>{m.etiqueta}
                 </NavLink>
-              ))}
+              )))}
             </nav>
           </aside>
         )}
         <main className="principal"><div className="contenedor">{children}</div></main>
       </div>
+      <Bienvenida usuario={usuario} menu={menu} />
     </>
   );
 }

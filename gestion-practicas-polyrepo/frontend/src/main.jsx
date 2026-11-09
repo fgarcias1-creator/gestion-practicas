@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { sesion } from './api.js';
@@ -18,13 +18,15 @@ const PANEL = { estudiante: Estudiante, tutor: Tutor, docente: Docente, director
 function Panel() {
   const u = sesion.usuario();
   const { pathname } = useLocation();
+  // Opciones del menú que el panel del rol pide inhabilitar: { ruta: motivo }. Hoy: el estudiante ya asignado no puede «Solicitar práctica».
+  const [bloqueadas, setBloqueadas] = useState({});
   if (!u) return <Navigate to="/login" replace />;
   const Vista = PANEL[u.rol];
-  const menu = MENU[u.rol] || [];
+  const menu = (MENU[u.rol] || []).map((m) => (bloqueadas[m.ruta] ? { ...m, deshabilitada: true, motivo: bloqueadas[m.ruta] } : m));
   const seccion = pathname.split('/')[1];
   // El estudiante resuelve sus propias redirecciones (flujo Astah); en los demás roles una dirección desconocida lleva a la primera opción.
   if (u.rol !== 'estudiante' && menu.length && !menu.some((x) => x.ruta === seccion)) return <Navigate to={'/' + menu[0].ruta} replace />;
-  return <Layout usuario={u} menu={menu}><Vista usuario={u} seccion={seccion} /></Layout>;
+  return <Layout usuario={u} menu={menu}><Vista usuario={u} seccion={seccion} bloquearMenu={setBloqueadas} /></Layout>;
 }
 
 createRoot(document.getElementById('root')).render(

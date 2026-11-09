@@ -26,7 +26,7 @@ function simular({ sol, post }) {
   });
   return llamadas;
 }
-const montar = (ruta = '/solicitud') => render(<MemoryRouter initialEntries={[ruta]}><Estudiante usuario={{ perfil_id: 1 }} /></MemoryRouter>);
+const montar = (ruta = '/solicitud', bloquearMenu) => render(<MemoryRouter initialEntries={[ruta]}><Estudiante usuario={{ perfil_id: 1 }} bloquearMenu={bloquearMenu} /></MemoryRouter>);
 
 test('Pasos 2-3: muestra ✔ por requisito y campos de solo lectura con práctica, semestre de ejecución y período', async () => {
   simular({ sol: solicitud() });
@@ -119,4 +119,24 @@ test('Estudiante con práctica: ve la nota del docente por sesión y descarga su
   expect(await screen.findByText('4.5 — Buen manejo')).toBeTruthy();
   await userEvent.click(screen.getByRole('button', { name: 'Descargar PDF' }));
   await waitFor(() => expect(llamadas.some((u) => u.endsWith('/bitacora/1/pdf'))).toBe(true));
+});
+
+test('Con práctica asignada pide inhabilitar «Solicitar práctica» en el menú; sin asignación no bloquea nada', async () => {
+  global.fetch = vi.fn((url) => {
+    if (url.endsWith('/solicitudes/mia')) return json(solicitud({ estado_solicitud: 'asignado', etiqueta: 'Asignado', puede_enviar: false }));
+    if (url.endsWith('/asignaciones/mia')) return json({ id: 1, estado: 'en_curso', institucion: 'Clínica Santa Ana', tutor: 'Tomás', docente: 'Diana', fecha_inicio_practica: '2026-10-01' });
+    if (url.endsWith('/bitacora/1')) return json({ horas_acumuladas: 0, horas_requeridas: 160, calificacion: null, sesiones: [] });
+    return json({}, 404);
+  });
+  const bloquear = vi.fn();
+  const { unmount } = montar('/solicitud', bloquear);
+  expect(await screen.findByText('Mi práctica')).toBeTruthy();                  // /solicitud redirige al seguimiento
+  await waitFor(() => expect(bloquear).toHaveBeenLastCalledWith({ solicitud: 'Ya tiene una práctica asignada' }));
+  unmount();
+
+  simular({ sol: solicitud() });
+  const libre = vi.fn();
+  montar('/solicitud', libre);
+  expect(await screen.findByText('Solicitud de práctica')).toBeTruthy();
+  expect(libre).toHaveBeenLastCalledWith({});
 });

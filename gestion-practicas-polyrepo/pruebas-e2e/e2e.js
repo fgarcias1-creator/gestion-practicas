@@ -151,10 +151,10 @@ const sesionForm = (extra = {}) => {
   check('otro estudiante no puede descargar ese PDF', (await fetch(`${G}/bitacora/${est1}/pdf`, { headers: { Authorization: `Bearer ${e4}` } })).status === 404);
   check('el borrador (que no sale en el PDF) se puede eliminar', (await api(`/sesiones/${bor.data._id}`, { token: e1, method: 'DELETE' })).status === 204);
 
-  console.log('RF01 El docente rechaza solicitudes');
-  const solPend = (await api('/solicitudes', { token: doc })).data;
-  check('el docente ve las solicitudes pendientes', Array.isArray(solPend));
-  if (solPend.length) check('el docente rechaza con motivo', (await api(`/solicitudes/${solPend[0].estudiante_id}/rechazar`, { token: doc, method: 'PATCH', body: { motivo: 'No cumple el semestre exigido' } })).status === 200);
+  console.log('RF01 Solo el director atiende solicitudes (el docente ya no)');
+  check('el docente NO ve las solicitudes pendientes', (await api('/solicitudes', { token: doc })).status === 403);
+  const solPend = (await api('/solicitudes', { token: dir })).data;
+  if (solPend.length) check('el docente NO puede rechazar solicitudes', (await api(`/solicitudes/${solPend[0].estudiante_id}/rechazar`, { token: doc, method: 'PATCH', body: { motivo: 'No cumple el semestre exigido' } })).status === 403);
 
   console.log('RF07 Reportes');
   const rep = (await api('/reportes/asignaciones', { token: dir })).data;

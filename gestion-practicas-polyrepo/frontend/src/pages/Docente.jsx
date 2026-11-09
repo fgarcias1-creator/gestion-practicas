@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { api } from '../api.js';
-import { useDatos, useToast, Tarjeta, Insignia, ModalMotivo, Filtros, useFiltros, coincide, fecha } from '../ui.jsx';
+import { useDatos, useToast, Tarjeta, Insignia, Filtros, useFiltros, coincide, fecha } from '../ui.jsx';
 import Bitacora from '../Bitacora.jsx';
 
 const ESTADOS_ASIGNACION = [['', 'Todos'], ['asignado', 'Asignado'], ['en_curso', 'En curso'], ['evaluado', 'Evaluado'], ['calificado', 'Calificado'], ['finalizado', 'Finalizado']];
 
 /**
- * Panel del docente asesor (RF05, RF06 y RF01), con sus opciones en la barra lateral:
+ * Panel del docente asesor (RF05 y RF06). Única opción de la barra lateral:
  *  - Mis estudiantes: calificar cada sesión, publicar la nota final y consultar la bitácora (con PDF).
- *  - Solicitudes: rechazar o devolver solicitudes pendientes (la asignación la hace el director).
+ * Las solicitudes de práctica las atiende solo el director.
  */
-export default function Docente({ seccion = 'estudiantes' }) {
-  return seccion === 'solicitudes' ? <SolicitudesDocente /> : <Estudiantes />;
+export default function Docente() {
+  return <Estudiantes />;
 }
 
 function Estudiantes() {
@@ -141,50 +141,5 @@ function FilaSesion({ sesion: s, vigente, publicada, asignacionId, avisar, alGua
         </>
       )}
     </div>
-  );
-}
-
-/** RF01: el docente puede rechazar o devolver solicitudes pendientes (el motivo es obligatorio y se notifica al estudiante). */
-function SolicitudesDocente() {
-  const sol = useDatos(() => api('/solicitudes'));
-  const [rechazo, setRechazo] = useState(null);
-  const [toast, avisar] = useToast();
-  const filtros = useFiltros({ q: '', programa: '' });
-  const programas = [...new Set((sol.datos || []).map((x) => x.programa))].sort();
-  const visibles = (sol.datos || []).filter((x) => coincide(x, ['nombre_completo', 'codigo_estudiantil', 'programa'], filtros.valores.q) && (!filtros.valores.programa || x.programa === filtros.valores.programa));
-
-  async function confirmar(motivo) {
-    try {
-      await api(`/solicitudes/${rechazo.id}/${rechazo.accion}`, { method: 'PATCH', body: { motivo } });
-      avisar('ok', 'Solicitud actualizada. Se notificó al estudiante por la campana y por correo.');
-      setRechazo(null); await sol.recargar();
-    } catch (e) { setRechazo(null); avisar('error', e.message); }
-  }
-
-  return (
-    <>
-      {toast}
-      <Tarjeta titulo={`Solicitudes pendientes (${sol.datos?.length ?? 0})`}>
-        <p className="gris">Puede rechazar o devolver una solicitud para corrección. La asignación de la práctica la realiza el director del programa.</p>
-        <Filtros filtros={filtros} buscar="Nombre, código o programa…" total={sol.datos?.length ?? 0} mostrados={visibles.length}
-          selects={[{ k: 'programa', etiqueta: 'Programa', opciones: [['', 'Todos'], ...programas.map((x) => [x, x])] }]} />
-        <table>
-          <thead><tr><th>Estudiante</th><th>Programa</th><th>Semestre</th><th>Créditos aprobados</th><th>Solicitó</th><th></th></tr></thead>
-          <tbody>{visibles.map((s) => (
-            <tr key={s.estudiante_id}><td>{s.nombre_completo}<br /><span className="gris">{s.codigo_estudiantil}</span></td><td>{s.programa}</td><td>{s.semestre}</td>
-              <td>{s.creditos_aprobados}/{s.creditos_totales} ({s.porcentaje_creditos}%)</td><td>{fecha(s.fecha_solicitud)}</td>
-              <td>
-                <button className="sec" onClick={() => setRechazo({ accion: 'devolver', id: s.estudiante_id, nombre: s.nombre_completo })}>Devolver</button>
-                <button className="mal" onClick={() => setRechazo({ accion: 'rechazar', id: s.estudiante_id, nombre: s.nombre_completo })}>Rechazar</button></td></tr>))}
-          </tbody>
-        </table>
-        {sol.datos?.length === 0 && <p className="gris">No hay solicitudes pendientes.</p>}
-      </Tarjeta>
-      {rechazo && (
-        <ModalMotivo titulo={rechazo.accion === 'rechazar' ? `Rechazar la solicitud de ${rechazo.nombre}` : `Devolver la solicitud de ${rechazo.nombre}`}
-          descripcion={rechazo.accion === 'rechazar' ? 'El estudiante recibirá el motivo en una notificación y por correo.' : 'El estudiante podrá corregir y volver a enviar su solicitud.'}
-          alConfirmar={confirmar} alCancelar={() => setRechazo(null)} />
-      )}
-    </>
   );
 }

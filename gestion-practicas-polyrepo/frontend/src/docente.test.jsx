@@ -11,8 +11,6 @@ const SESIONES = [
 const BITACORA = { estudiante_id: 3, estado_general: 'en_curso', horas_acumuladas: 5, horas_requeridas: 160, calificacion: null,
   asignacion: { estudiante: 'Sara En-Curso', institucion: 'Clínica Santa Ana', programa: 'Ingeniería de Sistemas', tutor: 'Tomás Tutor', docente: 'Diana Docente', fecha_inicio_practica: '2026-10-01' },
   sesiones: [{ _id: 's1', fecha_sesion: '2026-10-20T00:00:00Z', horas: 3, resumen_actividades: 'Soporte a usuarios', estado_validacion: 'validada_tutor', calificacion: null }] };
-const SOLICITUDES = [{ estudiante_id: 2, nombre_completo: 'Mateo Pendiente', codigo_estudiantil: 'U2', programa: 'Ingeniería de Sistemas', semestre: 8,
-  creditos_aprobados: 136, creditos_totales: 160, porcentaje_creditos: 85, fecha_solicitud: '2026-10-28T10:00:00Z' }];
 
 /** Simula el Servicio de Evaluación con estado: guarda notas, calcula el resumen y publica. */
 function simular() {
@@ -27,7 +25,6 @@ function simular() {
     const m = opts.method || 'GET'; const body = opts.body ? JSON.parse(opts.body) : undefined; llamadas.push({ m, url, body });
     if (m === 'GET' && url.endsWith('/asignaciones')) return json(ASIG);
     if (m === 'GET' && url.endsWith('/evaluaciones/1')) return json(est);
-    if (m === 'GET' && url.endsWith('/solicitudes')) return json(SOLICITUDES);
     if (m === 'GET' && url.endsWith('/bitacora/3')) return json(BITACORA);
     if (m === 'GET' && url.endsWith('/bitacora/3/pdf')) return Promise.resolve({ ok: true, status: 200, blob: () => Promise.resolve(new Blob(['%PDF-1.4'])) });
     if (m === 'POST' && url.endsWith('/calificaciones/sesiones')) {
@@ -37,7 +34,6 @@ function simular() {
     if (m === 'POST' && url.endsWith('/calificaciones')) {
       est.vigente = { id: 9, nota: est.resumen.promedio, retroalimentacion: body.retroalimentacion }; est.historial = [est.vigente]; return json(est.vigente, 201);
     }
-    if (m === 'PATCH' && /\/solicitudes\/2\/rechazar$/.test(url)) return json({ estado_solicitud: 'rechazado' });
     return json({ error: 'sin simular ' + m + ' ' + url }, 404);
   });
   return llamadas;
@@ -92,23 +88,13 @@ test('RF06: después de publicar, cambiar una sesión es una CORRECCIÓN y exige
   expect(screen.getByText('Justificación de la corrección')).toBeTruthy();
 });
 
-test('RF01: el docente rechaza una solicitud con un motivo obligatorio (modal)', async () => {
+test('El docente NO atiende solicitudes: aunque entre a /solicitudes ve «Mis estudiantes» y nunca consulta /solicitudes', async () => {
   const llamadas = simular();
   render(<Docente seccion="solicitudes" />);
-  expect(await screen.findByText('Mateo Pendiente')).toBeTruthy();
-  await userEvent.click(screen.getByRole('button', { name: 'Rechazar' }));
-  const modal = await screen.findByRole('dialog');
-  const confirmar = within(modal).getByRole('button', { name: 'Confirmar' });
-  expect(confirmar.disabled).toBe(true);
-  await userEvent.type(within(modal).getByRole('textbox'), 'No');
-  expect(confirmar.disabled).toBe(true);                                    // mínimo 5 caracteres
-  await userEvent.type(within(modal).getByRole('textbox'), ' cumple el semestre exigido');
-  await waitFor(() => expect(confirmar.disabled).toBe(false));
-  await userEvent.click(confirmar);
-  await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/notificó al estudiante/));
-  const patch = llamadas.find((l) => l.m === 'PATCH');
-  expect(patch.url).toMatch(/\/solicitudes\/2\/rechazar$/);
-  expect(patch.body.motivo).toBe('No cumple el semestre exigido');
+  expect(await screen.findByText('Mis estudiantes')).toBeTruthy();
+  expect(screen.queryByText(/Solicitudes pendientes/)).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Rechazar' })).toBeNull();
+  expect(llamadas.some((l) => l.url.includes('/solicitudes'))).toBe(false);
 });
 
 test('RF05: el docente consulta la bitácora de su estudiante y la descarga en PDF', async () => {

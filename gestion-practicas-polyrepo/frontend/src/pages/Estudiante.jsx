@@ -7,12 +7,19 @@ import { useDatos, useAccion, useToast, Tarjeta, Insignia, Modal, Pasos, Filtros
  * Panel del estudiante. Implementa la especificación Astah del caso de uso «Solicitar práctica»:
  *  /solicitud   -> formulario. Flujo alterno 1a: si ya tiene una solicitud en trámite o aprobada, REDIRIGE a /seguimiento.
  *  /seguimiento -> «Consultar seguimiento» (RF05). Si no tiene práctica ni solicitud, redirige a /solicitud.
+ *  Con práctica asignada, la opción «Solicitar práctica» del menú queda inhabilitada (bloquearMenu).
  * Las dos opciones están en la barra lateral (Layout); aquí solo se resuelven las rutas.
  */
-export default function Estudiante({ usuario }) {
+export default function Estudiante({ usuario, bloquearMenu }) {
   const [toast, avisar] = useToast();
   const sol = useDatos(() => api('/solicitudes/mia'));
   const asg = useDatos(() => api('/asignaciones/mia').catch(() => null)); // 404 = aún sin práctica
+
+  // Con la práctica ya asignada, «Solicitar práctica» queda inhabilitada en el menú (no hay nada más que solicitar).
+  const asignado = Boolean(asg.datos) || sol.datos?.estado_solicitud === 'asignado';
+  useEffect(() => {
+    bloquearMenu?.(asignado ? { solicitud: 'Ya tiene una práctica asignada' } : {});
+  }, [asignado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (sol.cargando || asg.cargando) return <p>Cargando…</p>;
   if (sol.error) return <p className='aviso error'>{sol.error}</p>;
@@ -154,7 +161,7 @@ function MiPractica({ usuario, asignacion }) {
             {sesiones.map((s) => (
               <tr key={s._id}>
                 <td>{fecha(s.fecha_sesion.slice(0, 10))}</td><td>{s.horas}</td><td>{s.resumen_actividades || <span className="gris">(sin resumen)</span>}</td>
-                <td>{s.evidencias.length ? s.evidencias.map((e) => <div key={e.archivo}><button className="link" onClick={() => descargar(`/sesiones/${s._id}/evidencias/${e.archivo}`, e.nombre_original).catch((x) => avisar('error', x.message))}>{e.nombre_original}</button></div>) : '—'}</td>
+                <td>{s.evidencias?.length ? s.evidencias.map((e) => <div key={e.archivo}><button className="link" onClick={() => descargar(`/sesiones/${s._id}/evidencias/${e.archivo}`, e.nombre_original).catch((x) => avisar('error', x.message))}>{e.nombre_original}</button></div>) : '—'}</td>
                 <td><Insignia estado={s.estado_validacion} />{s.validacion_automatica && <small> (automática)</small>}</td>
                 <td>{s.observacion_tutor || '—'}</td>
                 <td>{s.calificacion ? `${s.calificacion.nota} — ${s.calificacion.retroalimentacion}` : '—'}</td>

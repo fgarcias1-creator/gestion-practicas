@@ -20,7 +20,7 @@ Esta guía sirve para **levantar el proyecto en su computador** y probar el fluj
 |---|:-:|:-:|:-:|:-:|:-:|
 | Crear usuarios, activar/desactivar cuentas, restablecer contraseñas | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Crear instituciones, convenios, adendas, cupos | ✅ | ❌ (solo consulta) | ❌ | ❌ | ❌ |
-| Aprobar / rechazar / devolver solicitudes | ❌ | ✅ | ✅ (rechazar/devolver) | ❌ | ❌ |
+| Aprobar / rechazar / devolver solicitudes | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Asignar institución + tutor + docente al estudiante | ❌ | ✅ | ❌ | ❌ | ❌ |
 | Solicitar práctica y subir sesiones | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Validar sesiones y evaluar desempeño | ❌ | ❌ | ❌ | ✅ | ❌ |
@@ -155,7 +155,9 @@ Correo `admin@udi.edu.co` · Contraseña `Practicas2026*`
 ---
 
 ### 4.5 Barra lateral y filtros (para probar)
-- Entre con cada rol y compruebe que el menú de la izquierda cambia: administrador (Usuarios, Instituciones, Programas), director (Solicitudes, Asignaciones, Seguimiento, Instituciones, Reportes), docente (Mis estudiantes, Solicitudes), tutor (Mis estudiantes), estudiante (Solicitar práctica, Consultar seguimiento).
+- Entre con cada rol y compruebe que el menú de la izquierda cambia: administrador (Usuarios, Instituciones, Programas), director (Solicitudes, Asignaciones, Seguimiento, Instituciones, Reportes), docente (Mis estudiantes), tutor (Mis estudiantes), estudiante (Solicitar práctica, Consultar seguimiento).
+- Al entrar, cada rol ve una **bienvenida** con su nombre, lo que puede hacer y accesos directos a sus opciones (sale una vez por inicio de sesión; «No volver a mostrar» la desactiva para ese usuario en ese navegador).
+- Cuando el estudiante ya tiene práctica asignada, la opción **Solicitar práctica** aparece inhabilitada (🔒) en el menú y en la bienvenida.
 - En cualquier lista use el cuadro **Buscar** (no distingue tildes ni mayúsculas), las listas desplegables y, donde aparece, **Desde/Hasta**. El texto «Mostrando X de Y» indica cuántos resultados quedan; **Limpiar filtros** los quita.
 
 ## 5. Usuarios demo

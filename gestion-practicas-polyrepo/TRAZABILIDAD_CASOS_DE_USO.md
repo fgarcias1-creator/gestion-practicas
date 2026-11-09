@@ -18,7 +18,7 @@ Leyenda: ✔ implementado · ◐ parcial · «Mongo» = depende de MongoDB y **n
 | 6 | Consultar seguimiento | Estudiante, Docente, Director | `/bitacora/:id` y `/bitacora/:id/pdf` | ✔ (Mongo) | Línea de estados, horas del programa, sesiones, nota por sesión y final. El director **busca** estudiantes (pestaña *Seguimiento*); el docente abre la bitácora de los suyos. **Descarga en PDF** (RF05). |
 | 7 | Generar reportes | Director | `servicio-reportes` · *Reportes* | ◐ (Mongo) | Filtros por estado y CSV. Faltan filtro por período académico, solicitudes pendientes/rechazadas y PDF/Excel. |
 | 8 | Gestionar instituciones y convenios | **Administrador** (el director solo consulta) | `/instituciones`, `/convenios` · *Instituciones* | ✔ | Crear, ajustar cupos, inhabilitar, convenios y adenda. La pantalla ya no muestra avisos de convenios por vencer (el endpoint `/convenios/alertas` sigue existiendo). Falta filtrar convenios por estado y editar los datos de contacto en pantalla (la API sí lo permite). |
-| 9 | Rechazar solicitud de práctica | Docente, Director | `/solicitudes/:id/rechazar\|devolver` | ✔ | **Docente y director** rechazan o devuelven desde pantalla con un motivo obligatorio (modal). Avisa por campana y por correo. |
+| 9 | Rechazar solicitud de práctica | Director | `/solicitudes/:id/rechazar\|devolver` | ✔ | **Solo el director** rechaza o devuelve desde pantalla con un motivo obligatorio (modal). Avisa por campana y por correo. El docente ya no atiende solicitudes (403 en el servidor). |
 | 10 | Validar convenio activo y cupo disponible | (incluido en 2) | `validarAsignacion()` en `servicio-practicas` | ✔ | Transacción con la institución bloqueada (`FOR UPDATE`). |
 
 ## Cambio de roles (administrador de sistemas)

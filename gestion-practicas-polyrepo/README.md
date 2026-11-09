@@ -49,7 +49,7 @@ requisitos y horas), créditos aprobados (el % se calcula), período lectivo, li
 |---|---|---|
 | **Administrador** (personal de sistemas) | Crea y gestiona **usuarios** (estudiantes, tutores, docentes, directores y otros administradores: crear, activar/desactivar, restablecer contraseña) y registra **instituciones, convenios, adendas y cupos** y los **programas académicos** (ingenierías, licenciaturas…). | Aprobar/rechazar solicitudes, asignar prácticas, calificar. |
 | **Director** | Aprueba o rechaza (o devuelve) solicitudes y **asigna institución, tutor y docente** al estudiante. Consulta seguimiento y reportes; consulta (sin modificar) instituciones y convenios. | Crear usuarios, crear/modificar instituciones o convenios. |
-| Docente | Rechaza/devuelve solicitudes, califica sesiones y publica la nota final. | Crear usuarios, instituciones, asignar. |
+| Docente | Califica sesiones, consulta la bitácora de sus estudiantes y publica la nota final. | Atender solicitudes (rechazar/devolver), crear usuarios, instituciones, asignar. |
 | Tutor | Valida sesiones y evalúa el desempeño. | — |
 | Estudiante | Solicita la práctica y registra sus sesiones. | — |
 

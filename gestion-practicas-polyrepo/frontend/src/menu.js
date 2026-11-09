@@ -2,7 +2,7 @@
 export const MENU = {
   estudiante: [{ ruta: 'solicitud', etiqueta: 'Solicitar práctica', icono: '📝' }, { ruta: 'seguimiento', etiqueta: 'Consultar seguimiento', icono: '📒' }],
   tutor: [{ ruta: 'estudiantes', etiqueta: 'Mis estudiantes', icono: '👥' }],
-  docente: [{ ruta: 'estudiantes', etiqueta: 'Mis estudiantes', icono: '👥' }, { ruta: 'solicitudes', etiqueta: 'Solicitudes', icono: '📥' }],
+  docente: [{ ruta: 'estudiantes', etiqueta: 'Mis estudiantes', icono: '👥' }],
   director: [
     { ruta: 'solicitudes', etiqueta: 'Solicitudes', icono: '📥' }, { ruta: 'asignaciones', etiqueta: 'Asignaciones', icono: '🧭' },
     { ruta: 'seguimiento', etiqueta: 'Seguimiento', icono: '📒' }, { ruta: 'instituciones', etiqueta: 'Instituciones', icono: '🏫' }, { ruta: 'reportes', etiqueta: 'Reportes', icono: '📊' },

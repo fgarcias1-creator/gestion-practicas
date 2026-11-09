@@ -152,7 +152,7 @@ r.post('/solicitudes', A, requerirRol('estudiante'), asyncHandler(async (req, re
 }));
 
 /** Lista de espera del director: orden de llegada (primero en solicitar, primero en ser atendido). */
-r.get('/solicitudes', A, requerirRol('director', 'docente'), asyncHandler(async (req, res) => {
+r.get('/solicitudes', A, requerirRol('director'), asyncHandler(async (req, res) => {
   const estado = req.query.estado || 'pendiente';
   const { rows } = await query(
     `SELECT e.id AS estudiante_id, u.nombre_completo, u.email, e.codigo_estudiantil, p.nombre AS programa, p.facultad, e.semestre,
@@ -165,8 +165,8 @@ r.get('/solicitudes', A, requerirRol('director', 'docente'), asyncHandler(async 
   res.json(rows);
 }));
 
-/** Rechazar (definitivo) o devolver para corrección (subsanable). Motivo obligatorio. */
-r.patch('/solicitudes/:estudianteId/:accion(rechazar|devolver)', A, requerirRol('director', 'docente'),
+/** Rechazar (definitivo) o devolver para corrección (subsanable). Motivo obligatorio. Solo el director (el docente ya no atiende solicitudes). */
+r.patch('/solicitudes/:estudianteId/:accion(rechazar|devolver)', A, requerirRol('director'),
   validar(z.object({ motivo: z.string().min(5, 'El motivo es obligatorio') })),
   asyncHandler(async (req, res) => {
     const nuevo = req.params.accion === 'rechazar' ? 'rechazado' : 'devuelto';
