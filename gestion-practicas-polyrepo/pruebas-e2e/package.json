@@ -1,0 +1,2 @@
+{ "name": "pruebas-e2e", "version": "1.0.0", "private": true, "description": "Pruebas de extremo a extremo del sistema completo (a través del Gateway)",
+  "scripts": { "test": "node e2e.js" }, "dependencies": { "dotenv": "^16.4.5", "mongoose": "^8.5.0" } }
