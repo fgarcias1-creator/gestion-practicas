@@ -11,7 +11,7 @@ Leyenda: ✔ implementado · ◐ parcial · «Mongo» = depende de MongoDB y **n
 | # | Caso de uso | Actor | Dónde está | Estado | Notas |
 |---|---|---|---|---|---|
 | 1 | Solicitar práctica | Estudiante | `servicio-practicas` `/solicitudes` · *Solicitar práctica* | ✔ | Pasos 1-5, flujos 1a y 2a y excepción E1 de Astah. Requisitos según el **programa**. |
-| 2 | Asignar práctica | Director | `/asignaciones` · *Solicitudes* y *Asignaciones* | ✔ | Pasos 1-4, **2a** reasignación, **E1** (sin cupos/convenio: deshabilitada + alerta), **E2** (carga completa: advertencia). Avisa por campana y **por correo** a estudiante, tutor e institución. |
+| 2 | Asignar práctica | Director | `/asignaciones` · *Solicitudes* y *Asignaciones* | ✔ | Pasos 1-4, **2a** reasignación, **E1** (sin cupos, sin convenio o **sin tutores activos**: deshabilitada + alerta; el servidor también lo rechaza), **E2** (carga completa: advertencia). Avisa por campana y **por correo** a estudiante, tutor e institución. |
 | 3 | Registrar evidencia de sesión | Estudiante | `servicio-seguimiento` `/sesiones` | ✔ (Mongo) | evidencia de **cualquier formato** (≤ 5 MB por archivo), borrador **editable** (`PUT /sesiones/:id`, con envío opcional), hora del servidor, fecha entre el inicio de la práctica y hoy. |
 | 4 | Validar asistencia y desempeño | Tutor | `/sesiones/:id/validar\|rechazar`, `/evaluaciones` | ✔ (Mongo) | Un clic; rechazo con observación; evaluación de desempeño; avisa al estudiante. |
 | 5 | Calificar práctica | Docente | `servicio-evaluacion` · *Mis estudiantes → Calificar* | ✔ | **Una nota por sesión**, la **nota final es el promedio** y el docente la confirma y publica (RF06). Requiere evaluación del tutor y todas las sesiones calificadas. |

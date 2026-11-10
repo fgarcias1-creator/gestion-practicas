@@ -200,11 +200,15 @@ const esquemaInst = z.object({
 r.get('/instituciones', A, requerirRol('administrador', 'director', 'docente'), asyncHandler(async (req, res) => {
   const { rows: insts } = await query('SELECT * FROM instituciones ORDER BY id');
   const { rows: convs } = await query('SELECT * FROM convenios');
+  // Tutores con usuario activo por institución: sin al menos uno, la institución no se puede asignar
+  const { rows: tuts } = await query(
+    `SELECT t.institucion_id, COUNT(*)::int AS n FROM tutores t JOIN usuarios u ON u.id=t.usuario_id WHERE u.estado='activo' GROUP BY t.institucion_id`);
   let lista = insts.map((i) => {
     const cs = convs.filter((c) => c.institucion_id === i.id).map(conEstado);
-    return { ...i, convenios: cs, convenio_vigente: cs.some((c) => CONVENIO_UTIL.includes(c.estado)) };
+    return { ...i, convenios: cs, convenio_vigente: cs.some((c) => CONVENIO_UTIL.includes(c.estado)),
+      tutores_disponibles: tuts.find((t) => t.institucion_id === i.id)?.n || 0 };
   });
-  if (req.query.disponibles === 'true') lista = lista.filter((i) => i.activa && i.convenio_vigente && i.cupo_disponible > 0);
+  if (req.query.disponibles === 'true') lista = lista.filter((i) => i.activa && i.convenio_vigente && i.cupo_disponible > 0 && i.tutores_disponibles > 0);
   res.json(lista);
 }));
 
@@ -290,7 +294,7 @@ const esquemaAsignar = z.object({
 /**
  * Reglas de RF02 (se ejecuta DENTRO de una transacción, con la institución bloqueada FOR UPDATE
  * para que dos directores no consuman el mismo último cupo a la vez).
- * Bloquea (E1): institución inactiva, convenio no vigente, sin cupo, tutor de otra institución.
+ * Bloquea (E1): institución inactiva, convenio no vigente, sin cupo, tutor de otra institución o tutor inactivo (sin tutores disponibles).
  * Advierte (E2, no bloquea): tutor o docente en su límite de estudiantes.
  */
 async function validarAsignacion(c, d, excluirAsignacionId = 0) {
@@ -300,9 +304,10 @@ async function validarAsignacion(c, d, excluirAsignacionId = 0) {
   const conv = convs.find((cv) => (!d.convenio_id || cv.id === d.convenio_id) && CONVENIO_UTIL.includes(estadoConvenio(cv)));
   if (!conv || inst.cupo_disponible <= 0) throw new HttpError(409, 'La institución seleccionada no cuenta con cupos vigentes');
 
-  const { rows: [tutor] } = await c.query('SELECT * FROM tutores WHERE id=$1', [d.tutor_id]);
+  const { rows: [tutor] } = await c.query('SELECT t.*, u.estado AS estado_usuario FROM tutores t JOIN usuarios u ON u.id=t.usuario_id WHERE t.id=$1', [d.tutor_id]);
   if (!tutor) throw new HttpError(404, 'Tutor no encontrado');
   if (tutor.institucion_id !== inst.id) throw new HttpError(409, 'El tutor pertenece a otra institución');
+  if (tutor.estado_usuario !== 'activo') throw new HttpError(409, 'El tutor seleccionado no está activo; la institución no tiene tutores disponibles');
   const { rows: [doc] } = await c.query('SELECT id FROM docentes WHERE id=$1', [d.docente_id]);
   if (!doc) throw new HttpError(404, 'Docente no encontrado');
 
@@ -453,7 +458,7 @@ r.get('/catalogos/tutores', A, requerirRol('director'), asyncHandler(async (req,
     `SELECT t.id, u.nombre_completo, t.institucion_id, t.cargo,
             (SELECT COUNT(*)::int FROM asignaciones a WHERE a.tutor_id = t.id AND a.estado IN ('asignado','en_curso')) AS carga
        FROM tutores t JOIN usuarios u ON u.id=t.usuario_id
-      ${req.query.institucion_id ? 'WHERE t.institucion_id=$1' : ''} ORDER BY t.id`, req.query.institucion_id ? [req.query.institucion_id] : []);
+      WHERE u.estado='activo' ${req.query.institucion_id ? 'AND t.institucion_id=$1' : ''} ORDER BY t.id`, req.query.institucion_id ? [req.query.institucion_id] : []);
   res.json(rows.map((t) => ({ ...t, limite: negocio.maxEstudiantesTutor })));
 }));
 r.get('/catalogos/docentes', A, requerirRol('director'), asyncHandler(async (req, res) => {

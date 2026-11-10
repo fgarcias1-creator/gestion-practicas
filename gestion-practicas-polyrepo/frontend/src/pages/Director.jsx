@@ -19,11 +19,15 @@ export default function Director({ seccion = 'solicitudes' }) {
 // Astah «Asignar práctica» + «Validar convenio activo y cupo disponible»
 // ---------------------------------------------------------------------
 
-/** Excepción E1: una institución solo se puede elegir con convenio vigente y cupos. `actual` = institución de la asignación que se reasigna. */
+/**
+ * Excepción E1: una institución solo se puede elegir con convenio vigente, cupos y al menos un tutor disponible (activo).
+ * `actual` = institución de la asignación que se reasigna.
+ */
 function disponibilidad(i, actual) {
   if (!i.activa) return { ok: false, motivo: 'inhabilitada' };
-  if (!i.convenio_vigente) return { ok: false, motivo: 'sin convenio vigente' };
-  if (i.cupo_disponible <= 0 && i.id !== actual) return { ok: false, motivo: 'sin cupos disponibles' };
+  if (!i.convenio_vigente) return { ok: false, motivo: 'sin convenio vigente', tipo: 'cupos' };
+  if (i.cupo_disponible <= 0 && i.id !== actual) return { ok: false, motivo: 'sin cupos disponibles', tipo: 'cupos' };
+  if (i.tutores_disponibles === 0) return { ok: false, motivo: 'sin tutores disponibles', tipo: 'tutores' };
   return { ok: true };
 }
 
@@ -61,7 +65,9 @@ function CamposAsignacion({ f, setF, insts, docs, tutores, actual }) {
       </div>
       {noDisponibles.length > 0 && (
         <div className="aviso error" role="alert">
-          {noDisponibles.map(({ i, d }) => <div key={i.id}>⚠ La institución seleccionada no cuenta con cupos vigentes: «{i.nombre}» ({d.motivo}). No se puede elegir.</div>)}
+          {noDisponibles.map(({ i, d }) => <div key={i.id}>{d.tipo === 'tutores'
+            ? <>⚠ «{i.nombre}» no tiene tutores disponibles para supervisar la práctica. No se puede elegir hasta que se registre un tutor activo.</>
+            : <>⚠ La institución seleccionada no cuenta con cupos vigentes: «{i.nombre}» ({d.motivo}). No se puede elegir.</>}</div>)}
         </div>
       )}
       {sobrecargado(tut, actual?.tutor_id) && <div className="aviso warn" role="alert">⚠ El tutor seleccionado superó el límite de estudiantes bajo su supervisión ({tut.carga}/{tut.limite}). Puede continuar, pero revise la carga.</div>}

@@ -5,11 +5,12 @@ import Director from './pages/Director.jsx';
 import Layout from './Layout.jsx';
 
 const json = (data, status = 200) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(data) });
-const inst = (o) => ({ id: 1, nombre: 'Clínica Santa Ana', activa: true, convenio_vigente: true, cupo_disponible: 3, cupo_total: 5, convenios: [], nit: '1', ...o });
+const inst = (o) => ({ id: 1, nombre: 'Clínica Santa Ana', activa: true, convenio_vigente: true, cupo_disponible: 3, cupo_total: 5, convenios: [], nit: '1', tutores_disponibles: 1, ...o });
 const INSTITUCIONES = [
   inst({}),
   inst({ id: 2, nombre: 'Alcaldía Sin Cupos', cupo_disponible: 0 }),
   inst({ id: 3, nombre: 'Soluciones TI', convenio_vigente: false }),
+  inst({ id: 4, nombre: 'Colegio Sin Tutores', tutores_disponibles: 0 }),        // cupos y convenio OK, pero ningún tutor activo
 ];
 const SOLICITUDES = [{ estudiante_id: 1, nombre_completo: 'Elena Estudiante', codigo_estudiantil: 'U1', programa: 'Ingeniería de Sistemas', semestre: 8,
   creditos_aprobados: 131, creditos_totales: 160, porcentaje_creditos: 81.9, fecha_solicitud: '2026-10-28T10:00:00Z' }];
@@ -58,6 +59,9 @@ test('Asignar práctica (E1): las instituciones sin cupos o sin convenio quedan 
   expect(por('Soluciones TI').disabled).toBe(true);
   const alertas = screen.getAllByText(/La institución seleccionada no cuenta con cupos vigentes/);
   expect(alertas.length).toBe(2);
+  expect(por('Colegio Sin Tutores').disabled).toBe(true);                       // sin tutores disponibles tampoco se puede elegir
+  expect(por('Colegio Sin Tutores').textContent).toContain('sin tutores disponibles');
+  expect(screen.getByText(/«Colegio Sin Tutores» no tiene tutores disponibles/)).toBeTruthy();
 });
 
 test('Asignar práctica (E2 + confirmación): advierte carga completa, pide confirmar y notifica a las partes', async () => {
