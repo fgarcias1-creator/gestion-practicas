@@ -2,6 +2,9 @@ import { render, screen, waitFor, within, fireEvent } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import Director from './pages/Director.jsx';
+
+const excel = {};
+vi.mock('write-excel-file/browser', () => ({ default: (hojas) => ({ toFile: (nombre) => { excel.hojas = hojas; excel.nombre = nombre; return Promise.resolve(); } }) }));
 import Layout from './Layout.jsx';
 
 const json = (data, status = 200) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(data) });
@@ -165,7 +168,7 @@ test('Filtros (director): la búsqueda ignora tildes y mayúsculas en Institucio
   expect(screen.queryByText('Soluciones TI')).toBeNull();
 });
 
-test('Reporte (director): tablero con indicadores, filtro por estado con chips, orden y exportación CSV del estado elegido', async () => {
+test('Reporte (director): tablero con indicadores, filtro por estado, orden y descarga en CSV, Excel o PDF', async () => {
   const FILAS = [
     { asignacion_id: 1, estudiante: 'Sara En-Curso', institucion: 'Clínica Santa Ana', tutor: 'Tomás', docente: 'Diana', estado: 'en_curso', horas_acumuladas: 0, horas_requeridas: 160, avance_pct: 0, nota_final: '' },
     { asignacion_id: 2, estudiante: 'Elena Estudiante', institucion: 'Clínica Santa Ana', tutor: 'Tomás', docente: 'Diana', estado: 'en_curso', horas_acumuladas: 11, horas_requeridas: 160, avance_pct: 7, nota_final: '' },
@@ -190,6 +193,25 @@ test('Reporte (director): tablero con indicadores, filtro por estado con chips, 
   expect(screen.getByText('Mostrando 2 de 2')).toBeTruthy();
   await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Ordenar' }), 'nombre');
   expect(filas()).toEqual(['Elena Estudiante', 'Sara En-Curso']);
-  await userEvent.click(screen.getByRole('button', { name: /Exportar CSV/ }));
+  await userEvent.click(screen.getByRole('button', { name: /Descargar reporte/ }));
+  await userEvent.click(screen.getByRole('menuitem', { name: /CSV/ }));
   await waitFor(() => expect(llamadas.some((u) => u.endsWith('formato=csv&estado=en_curso'))).toBe(true));
+  expect(screen.queryByRole('menu')).toBeNull();                                   // el menú se cierra al elegir
+
+  // Excel: exporta exactamente lo que se ve (2 filas «En curso», ordenadas por nombre) + hoja de resumen
+  await userEvent.click(screen.getByRole('button', { name: /Descargar reporte/ }));
+  await userEvent.click(screen.getByRole('menuitem', { name: /Excel/ }));
+  await waitFor(() => expect(excel.hojas).toBeTruthy());
+  const [practicas, resumen] = excel.hojas;
+  expect(practicas.sheet).toBe('Prácticas');
+  expect(practicas.data.slice(1).map((fila) => fila[0].value)).toEqual(['Elena Estudiante', 'Sara En-Curso']);
+  expect(practicas.data[0][0]).toMatchObject({ value: 'Estudiante', fontWeight: 'bold' });
+  expect(resumen.sheet).toBe('Resumen');
+  expect(excel.nombre).toMatch(/^reporte_practicas_\d{4}-\d{2}-\d{2}\.xlsx$/);
+
+  // Imprimir / guardar como PDF
+  window.print = vi.fn();
+  await userEvent.click(screen.getByRole('button', { name: /Descargar reporte/ }));
+  await userEvent.click(screen.getByRole('menuitem', { name: /Imprimir o guardar como PDF/ }));
+  expect(window.print).toHaveBeenCalled();
 });

@@ -113,7 +113,7 @@ CREATE UNIQUE INDEX ux_asignacion_estudiante ON asignaciones(estudiante_id);
 -- Servicio de Evaluación y Calificación --------------------------------
 CREATE TABLE evaluaciones_tutor (
   id               SERIAL PRIMARY KEY,
-  asignacion_id    INTEGER NOT NULL REFERENCES asignaciones(id),
+  asignacion_id    INTEGER NOT NULL UNIQUE REFERENCES asignaciones(id),   -- una sola evaluación por práctica (no editable)
   tutor_id         INTEGER NOT NULL REFERENCES tutores(id),
   disposicion      INTEGER CHECK (disposicion BETWEEN 1 AND 5),
   cumplimiento     INTEGER CHECK (cumplimiento BETWEEN 1 AND 5),

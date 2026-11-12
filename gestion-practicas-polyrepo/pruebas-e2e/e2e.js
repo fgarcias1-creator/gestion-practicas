@@ -127,6 +127,7 @@ const sesionForm = (extra = {}) => {
   const notaSesion = (sesion, nota, extra = {}) => api('/calificaciones/sesiones', { token: doc, method: 'POST', body: { asignacion_id: asgId, sesion_id: sesion, nota, retroalimentacion: 'Retroalimentación de la sesión', ...extra } });
   check('no se publica sin la evaluación del tutor', (await pub()).status === 409);
   check('tutor evalúa', (await api('/evaluaciones', { token: tut, method: 'POST', body: { asignacion_id: asgId, disposicion: 5, cumplimiento: 5 } })).status === 201);
+  check('la evaluación del tutor no se puede volver a registrar ni editar', (await api('/evaluaciones', { token: tut, method: 'POST', body: { asignacion_id: asgId, disposicion: 1, cumplimiento: 1 } })).status === 409);
   check('no se publica con sesiones sin calificar', (await pub()).status === 409);
   check('la nota de una sesión va de 0.0 a 5.0', (await notaSesion(s2._id, 5.5)).status === 400);
   check('el docente califica la sesión 1', (await notaSesion(s2._id, 4.0)).status === 201);

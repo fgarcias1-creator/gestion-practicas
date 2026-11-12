@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import { useDatos, useToast, Tarjeta, Insignia, Filtros, useFiltros, coincide, fecha, Evidencias } from '../ui.jsx';
+import { EstadoVacio } from '../Ilustracion.jsx';
 import Bitacora from '../Bitacora.jsx';
 
 const ESTADOS_ASIGNACION = [['', 'Todos'], ['asignado', 'Asignado'], ['en_curso', 'En curso'], ['evaluado', 'Evaluado'], ['calificado', 'Calificado'], ['finalizado', 'Finalizado']];
@@ -32,7 +33,7 @@ function Estudiantes() {
                 <button onClick={() => setVista({ tipo: 'calificar', asignacion: a })}>Calificar</button>
                 <button className="sec" onClick={() => setVista({ tipo: 'bitacora', asignacion: a })}>Ver bitácora</button></td></tr>))}</tbody>
         </table>
-        {asigs.datos?.length === 0 && <p className="gris">Aún no tiene estudiantes asignados.</p>}
+        {asigs.datos?.length === 0 && <EstadoVacio titulo="Aún no tiene estudiantes asignados.">Cuando el director le asigne estudiantes como docente asesor, aparecerán aquí.</EstadoVacio>}
         {asigs.datos?.length > 0 && visibles.length === 0 && <p className="gris">Ningún estudiante coincide con los filtros.</p>}
       </Tarjeta>
       {vista?.tipo === 'calificar' && <Calificar key={'c' + vista.asignacion.id} asignacion={vista.asignacion} alCambiar={asigs.recargar} />}
@@ -79,7 +80,7 @@ function Calificar({ asignacion, alCambiar }) {
       <Tarjeta titulo={`Calificar sesiones (${d.resumen.calificadas} de ${d.resumen.total})`}
         acciones={d.resumen.promedio !== null && <span>Promedio actual: <b>{d.resumen.promedio}</b></span>}>
         {publicada && <p className="aviso warn">La nota final ya está publicada: cambiar la nota de una sesión es una <b>corrección</b>, exige justificación y recalcula la nota final.</p>}
-        {d.sesiones.length === 0 && <p className="gris">Todavía no hay sesiones validadas por el tutor.</p>}
+        {d.sesiones.length === 0 && <EstadoVacio titulo="Todavía no hay sesiones validadas por el tutor.">Podrá calificar cada actividad cuando el tutor valide la asistencia.</EstadoVacio>}
         {d.sesiones.length > 1 && <Filtros filtros={filtros} buscar="Actividades de la sesión…" total={d.sesiones.length} mostrados={sesionesVisibles.length}
           selects={[{ k: 'estado', etiqueta: 'Calificación', opciones: [['', 'Todas'], ['sin_calificar', 'Sin calificar'], ['calificada', 'Calificadas']] }]} />}
         {sesionesVisibles.map((s) => <FilaSesion key={s._id} sesion={s} vigente={notaDe[s._id]} publicada={publicada} asignacionId={asignacion.id} avisar={avisar} alGuardar={recargar} />)}

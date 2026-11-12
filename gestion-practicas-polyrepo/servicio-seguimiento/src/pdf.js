@@ -37,7 +37,13 @@ function generarPdfBitacora(datos) {
     y += 18;
     doc.roundedRect(L, y, W, 10, 3).fill('#e8eefb').fillColor('#000');
     if (pct > 0) doc.roundedRect(L, y, (W * pct) / 100, 10, 3).fill('#0b3d91').fillColor('#000');
-    y += 28;
+    y += 22;
+    if (b.promedio_sesiones != null) {
+      doc.font('Helvetica-Bold').fontSize(11).text(`Promedio de actividades calificadas: ${b.promedio_sesiones.toFixed(1)}`, L, y, { continued: true })
+        .font('Helvetica').fillColor('#5b6475').text(`  (${b.sesiones_calificadas} de ${b.sesiones_validadas} sesiones validadas)`).fillColor('#000');
+      y += 18;
+    }
+    y += 6;
 
     // Tabla de sesiones
     const anchos = [50, 28, 76, 128, 96, 97];            // fecha, horas, estado, actividades, observación del tutor, calificación del docente

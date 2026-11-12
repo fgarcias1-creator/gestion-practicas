@@ -14,11 +14,15 @@ const { urls, puertos } = require('./lib/config');
 const app = crearApp('reportes');
 const r = express.Router();
 
+/**
+ * CSV para Excel en español (Colombia): separador «;» y coma decimal, que es lo que Excel espera con esa configuración
+ * regional (con «,» todo quedaba en una sola columna). El BOM inicial hace que Excel respete las tildes.
+ */
 const csv = (filas) => {
   if (!filas.length) return '';
   const cols = Object.keys(filas[0]);
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  return '\uFEFF' + [cols.join(','), ...filas.map((f) => cols.map((c) => esc(f[c])).join(','))].join('\n'); // BOM para que Excel respete tildes
+  const esc = (v) => (typeof v === 'number' ? String(v).replace('.', ',') : `"${String(v ?? '').replace(/"/g, '""')}"`);
+  return '\uFEFF' + [cols.join(';'), ...filas.map((f) => cols.map((c) => esc(f[c])).join(';'))].join('\r\n');
 };
 
 r.get('/reportes/asignaciones', autenticar, requerirRol('director'), asyncHandler(async (req, res) => {

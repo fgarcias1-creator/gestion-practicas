@@ -43,7 +43,7 @@ test('Pasos 2-3: muestra ✔ por requisito y campos de solo lectura con práctic
   expect(screen.getByRole('button', { name: 'Enviar solicitud' }).disabled).toBe(false);
 });
 
-test('Paso 4-5: «Enviar» abre un MODAL; al confirmar registra y REDIRIGE a «Consultar seguimiento» con estado «Pendiente de asignación»', async () => {
+test('Paso 4-5: «Enviar» abre un MODAL; al confirmar registra y muestra el estado «Pendiente de asignación» (el seguimiento sigue con candado)', async () => {
   const llamadas = simular({ sol: solicitud(), post: (marcar) => { marcar(); return json({ estado_solicitud: 'pendiente' }, 201); } });
   montar();
   await userEvent.click(await screen.findByRole('button', { name: 'Enviar solicitud' }));
@@ -66,7 +66,7 @@ test('Cancelar en el modal no envía nada', async () => {
   expect(llamadas.some((l) => l.startsWith('POST'))).toBe(false);
 });
 
-test('Flujo 1a: con solicitud en trámite, entrar a /solicitud REDIRIGE automáticamente a «Consultar seguimiento»', async () => {
+test('Flujo 1a: con solicitud en trámite, /solicitud muestra su estado y /seguimiento redirige ahí (aún no hay práctica que seguir)', async () => {
   simular({ sol: solicitud({ estado_solicitud: 'pendiente', etiqueta: 'Pendiente de asignación', puede_enviar: false, solicitud: { practica: 'Práctica Profesional', semestre: 8, periodo: '2026-II', fecha: '2026-10-28T20:00:00Z' } }) });
   montar('/solicitud');
   expect(await screen.findByText('Estado de mi solicitud')).toBeTruthy();
@@ -121,7 +121,7 @@ test('Estudiante con práctica: ve la nota del docente por sesión y descarga su
   await waitFor(() => expect(llamadas.some((u) => u.endsWith('/bitacora/1/pdf'))).toBe(true));
 });
 
-test('Con práctica asignada pide inhabilitar «Solicitar práctica» en el menú; sin asignación no bloquea nada', async () => {
+test('Candados del menú: con práctica asignada se bloquea «Solicitar práctica»; mientras solicita, se bloquea «Consultar seguimiento»', async () => {
   global.fetch = vi.fn((url) => {
     if (url.endsWith('/solicitudes/mia')) return json(solicitud({ estado_solicitud: 'asignado', etiqueta: 'Asignado', puede_enviar: false }));
     if (url.endsWith('/asignaciones/mia')) return json({ id: 1, estado: 'en_curso', institucion: 'Clínica Santa Ana', tutor: 'Tomás', docente: 'Diana', fecha_inicio_practica: '2026-10-01' });
@@ -138,5 +138,5 @@ test('Con práctica asignada pide inhabilitar «Solicitar práctica» en el men�
   const libre = vi.fn();
   montar('/solicitud', libre);
   expect(await screen.findByText('Solicitud de práctica')).toBeTruthy();
-  expect(libre).toHaveBeenLastCalledWith({});
+  await waitFor(() => expect(libre).toHaveBeenLastCalledWith({ seguimiento: 'Disponible cuando el director le asigne la práctica' }));
 });

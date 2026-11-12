@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { api, descargar } from '../api.js';
 import { useDatos, useAccion, useToast, Tarjeta, Insignia, Modal, Pasos, Filtros, useFiltros, coincide, enRango, ESTADOS_SESION, fecha, Evidencias } from '../ui.jsx';
+import Ilustracion, { EstadoVacio } from '../Ilustracion.jsx';
 
 /**
  * Panel del estudiante. Implementa la especificación Astah del caso de uso «Solicitar práctica»:
- *  /solicitud   -> formulario. Flujo alterno 1a: si ya tiene una solicitud en trámite o aprobada, REDIRIGE a /seguimiento.
- *  /seguimiento -> «Consultar seguimiento» (RF05). Si no tiene práctica ni solicitud, redirige a /solicitud.
- *  Con práctica asignada, la opción «Solicitar práctica» del menú queda inhabilitada (bloquearMenu).
+ *  /solicitud   -> formulario; con la solicitud ya enviada (pendiente), muestra su estado. Con práctica asignada redirige a /seguimiento.
+ *  /seguimiento -> «Consultar seguimiento» (RF05): bitácora de la práctica. Sin práctica asignada redirige a /solicitud.
+ *  El menú refleja la etapa con un candado (bloquearMenu): sin práctica, «Consultar seguimiento» está bloqueada;
+ *  con práctica asignada, lo bloqueado es «Solicitar práctica».
  * Las dos opciones están en la barra lateral (Layout); aquí solo se resuelven las rutas.
  */
 export default function Estudiante({ usuario, bloquearMenu }) {
@@ -15,25 +17,31 @@ export default function Estudiante({ usuario, bloquearMenu }) {
   const sol = useDatos(() => api('/solicitudes/mia'));
   const asg = useDatos(() => api('/asignaciones/mia').catch(() => null)); // 404 = aún sin práctica
 
-  // Con la práctica ya asignada, «Solicitar práctica» queda inhabilitada en el menú (no hay nada más que solicitar).
+  // Candados del menú según la etapa: mientras solicita, no hay seguimiento que consultar; ya asignado, no hay nada más que solicitar.
   const asignado = Boolean(asg.datos) || sol.datos?.estado_solicitud === 'asignado';
+  const listo = !sol.cargando && !asg.cargando;
   useEffect(() => {
-    bloquearMenu?.(asignado ? { solicitud: 'Ya tiene una práctica asignada' } : {});
-  }, [asignado]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!listo) return;
+    bloquearMenu?.(asignado
+      ? { solicitud: 'Ya tiene una práctica asignada' }
+      : { seguimiento: 'Disponible cuando el director le asigne la práctica' });
+  }, [asignado, listo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (sol.cargando || asg.cargando) return <p>Cargando…</p>;
   if (sol.error) return <p className='aviso error'>{sol.error}</p>;
   const s = sol.datos;
-  const enTramite = Boolean(asg.datos) || ['pendiente', 'asignado'].includes(s.estado_solicitud);
+  const pendiente = !asignado && s.estado_solicitud === 'pendiente';
   const recargar = () => Promise.all([sol.recargar(), asg.recargar()]);
+  const inicio = asignado ? '/seguimiento' : '/solicitud';
 
   return (
     <>
       {toast}
       <Routes>
-        <Route path='/solicitud' element={enTramite ? <Navigate to='/seguimiento' replace /> : <Solicitud datos={s} avisar={avisar} alEnviar={recargar} />} />
-        <Route path='/seguimiento' element={enTramite ? <Seguimiento usuario={usuario} solicitud={s} asignacion={asg.datos} /> : <Navigate to='/solicitud' replace />} />
-        <Route path='*' element={<Navigate to={enTramite ? '/seguimiento' : '/solicitud'} replace />} />
+        <Route path='/solicitud' element={asignado ? <Navigate to='/seguimiento' replace />
+          : pendiente ? <EstadoSolicitud solicitud={s} /> : <Solicitud datos={s} avisar={avisar} alEnviar={recargar} />} />
+        <Route path='/seguimiento' element={asignado ? <Seguimiento usuario={usuario} solicitud={s} asignacion={asg.datos} /> : <Navigate to='/solicitud' replace />} />
+        <Route path='*' element={<Navigate to={inicio} replace />} />
       </Routes>
     </>
   );
@@ -105,12 +113,18 @@ function Solicitud({ datos: s, avisar, alEnviar }) {
   );
 }
 
-/** «Consultar seguimiento»: con práctica asignada muestra la bitácora; con solicitud pendiente, su estado. */
+/** «Consultar seguimiento»: bitácora de la práctica asignada (si aún no llega el detalle de la asignación, el estado de la solicitud). */
 function Seguimiento({ usuario, solicitud: s, asignacion }) {
   if (asignacion) return <MiPractica usuario={usuario} asignacion={asignacion} />;
+  return <EstadoSolicitud solicitud={s} />;
+}
+
+/** Solicitud enviada, a la espera de que el director asigne institución y tutor. */
+function EstadoSolicitud({ solicitud: s }) {
   const d = s.solicitud;
   return (
     <Tarjeta titulo='Estado de mi solicitud' acciones={<Insignia estado='pendiente' etiqueta='Pendiente de asignación' />}>
+      <div className='espera-ilustrada'><Ilustracion tipo='espera' /></div>
       <Pasos estado='pendiente_asignacion' />
       <ul>
         <li>Práctica: <b>{d?.practica ?? s.requisitos.practica}</b></li>
@@ -119,7 +133,7 @@ function Seguimiento({ usuario, solicitud: s, asignacion }) {
         <li>Fecha de la solicitud: <b>{d?.fecha ? fecha(d.fecha) : '—'}</b></li>
       </ul>
       <p>Su solicitud está <b>pendiente de asignación</b>: el director del programa le asignará una institución y un tutor.</p>
-      <p className='gris'>Las nuevas solicitudes quedan inhabilitadas para este período lectivo.</p>
+      <p className='gris'>Las nuevas solicitudes quedan inhabilitadas para este período lectivo. «Consultar seguimiento» se habilitará 🔓 cuando tenga la práctica asignada.</p>
     </Tarjeta>
   );
 }
@@ -173,7 +187,7 @@ function MiPractica({ usuario, asignacion }) {
             ))}
           </tbody>
         </table>
-        {b && b.sesiones.length === 0 && <p className="gris">Aún no ha registrado sesiones.</p>}
+        {b && b.sesiones.length === 0 && <EstadoVacio titulo='Aún no ha registrado sesiones.'>Registre su primera sesión con sus evidencias para empezar a sumar horas.</EstadoVacio>}
         {b && b.sesiones.length > 0 && sesiones.length === 0 && <p className="gris">Ninguna sesión coincide con los filtros.</p>}
       </Tarjeta>
     </>

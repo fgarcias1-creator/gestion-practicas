@@ -41,7 +41,10 @@ export async function api(ruta, opts) {
 /** Trae un archivo protegido como Blob (con el token), sin descargarlo. Lo usa la vista previa de evidencias. */
 export async function obtenerArchivo(ruta) {
   const res = await pedir(ruta);
-  if (!res.ok) throw new Error('No se pudo abrir el archivo');
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || `No se pudo abrir el archivo (error ${res.status}${res.status === 404 ? ': el archivo no está en el servidor' : ''})`);
+  }
   return res.blob();
 }
 

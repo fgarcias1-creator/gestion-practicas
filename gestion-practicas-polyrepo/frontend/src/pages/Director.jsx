@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api, descargar } from '../api.js';
 import { useDatos, useToast, Tarjeta, Insignia, Modal, ModalMotivo, Filtros, useFiltros, coincide, enRango, fecha } from '../ui.jsx';
+import { EstadoVacio } from '../Ilustracion.jsx';
 import Bitacora from '../Bitacora.jsx';
 
 const ESTADOS_ASIGNACION = [['', 'Todos'], ['asignado', 'Asignado'], ['en_curso', 'En curso'], ['evaluado', 'Evaluado'], ['calificado', 'Calificado'], ['finalizado', 'Finalizado']];
@@ -148,7 +149,7 @@ function Solicitudes() {
                 <button className="mal" onClick={() => motivo('rechazar', s.estudiante_id, s.nombre_completo)}>Rechazar</button></td></tr>))}
           </tbody>
         </table>
-        {sol.datos?.length === 0 && <p className="gris">No hay estudiantes en lista de espera.</p>}
+        {sol.datos?.length === 0 && <EstadoVacio titulo="No hay estudiantes en lista de espera.">Cuando un estudiante envíe su solicitud aparecerá aquí, en orden de llegada.</EstadoVacio>}
         {enEspera.length > 0 && visibles.length === 0 && <p className="gris">Ningún estudiante coincide con los filtros.</p>}
       </Tarjeta>
 
@@ -294,6 +295,72 @@ function InstitucionesConsulta() {
   );
 }
 
+/** Menú «Descargar ▾» con varias opciones, cada una explicada. Se cierra con Esc o al hacer clic fuera. */
+function MenuDescarga({ opciones }) {
+  const [abierto, setAbierto] = useState(false);
+  const caja = useRef(null);
+  useEffect(() => {
+    if (!abierto) return undefined;
+    const fuera = (e) => !caja.current?.contains(e.target) && setAbierto(false);
+    const tecla = (e) => e.key === 'Escape' && setAbierto(false);
+    document.addEventListener('mousedown', fuera); document.addEventListener('keydown', tecla);
+    return () => { document.removeEventListener('mousedown', fuera); document.removeEventListener('keydown', tecla); };
+  }, [abierto]);
+  return (
+    <div className="menu-descarga" ref={caja}>
+      <button aria-haspopup="menu" aria-expanded={abierto} onClick={() => setAbierto(!abierto)}>⬇ Descargar reporte ▾</button>
+      {abierto && (
+        <div className="menu-descarga-panel" role="menu">
+          {opciones.map((o) => (
+            <button key={o.titulo} role="menuitem" className="menu-descarga-op" disabled={o.disabled} onClick={() => { setAbierto(false); o.accion(); }}>
+              <span className="menu-descarga-icono" aria-hidden="true">{o.icono}</span>
+              <span><b>{o.titulo}</b><small>{o.detalle}</small></span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Excel del reporte con formato: hoja «Prácticas» (lo que se ve en pantalla) y hoja «Resumen» con los indicadores. */
+async function excelReporte(filas, { estado, busqueda, horas, horasReq, avance, notaProm }) {
+  const { default: escribirExcel } = await import('write-excel-file/browser');
+  const cab = (value) => ({ value, fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: '#0B3D91', align: 'center', alignVertical: 'center' });
+  const etiqueta = Object.fromEntries(ETAPAS);
+  const datos = [
+    ['Estudiante', 'Institución', 'Tutor', 'Docente', 'Estado', 'Inicio', 'Horas validadas', 'Horas requeridas', 'Avance (%)', 'Nota final'].map(cab),
+    ...filas.map((f, n) => {
+      const fondo = n % 2 ? { backgroundColor: '#F5F7FB' } : {};
+      const nota = Number(f.nota_final);
+      return [
+        { value: f.estudiante, ...fondo }, { value: f.institucion, ...fondo }, { value: f.tutor, ...fondo }, { value: f.docente, ...fondo },
+        { value: etiqueta[f.estado] || f.estado, ...fondo }, { value: f.fecha_inicio ? String(f.fecha_inicio).slice(0, 10) : '', ...fondo },
+        { value: Number(f.horas_acumuladas) || 0, type: Number, ...fondo }, { value: Number(f.horas_requeridas) || 0, type: Number, ...fondo },
+        { value: Math.min(100, f.avance_pct) / 100, type: Number, format: '0%', ...fondo },
+        f_valida(nota) ? { value: nota, type: Number, format: '0.0', fontWeight: 'bold', textColor: nota >= 4 ? '#117A45' : nota >= 3 ? '#A15C00' : '#B3261E', ...fondo } : { value: 'Pendiente', textColor: '#5B6475', ...fondo },
+      ];
+    }),
+  ];
+  const resumen = [
+    [{ value: 'Reporte de prácticas académicas', fontWeight: 'bold', fontSize: 14, textColor: '#0B3D91' }, null],
+    [{ value: 'Generado' }, { value: new Date().toLocaleString('es-CO') }],
+    [{ value: 'Estado' }, { value: estado ? etiqueta[estado] : 'Todos' }],
+    [{ value: 'Búsqueda' }, { value: busqueda || '—' }],
+    [null, null],
+    [cab('Indicador'), cab('Valor')],
+    [{ value: 'Prácticas' }, { value: filas.length, type: Number }],
+    [{ value: 'Horas validadas' }, { value: `${horas} de ${horasReq}` }],
+    [{ value: 'Avance promedio' }, { value: avance / 100, type: Number, format: '0%' }],
+    [{ value: 'Nota promedio' }, notaProm == null ? { value: 'Sin notas finales' } : { value: notaProm, type: Number, format: '0.0' }],
+    ...ETAPAS.map(([k, t]) => [{ value: `En estado «${t}»` }, { value: filas.filter((f) => f.estado === k).length, type: Number }]),
+  ];
+  await escribirExcel([
+    { sheet: 'Prácticas', data: datos, columns: [28, 26, 20, 20, 13, 12, 15, 16, 11, 11].map((width) => ({ width })), stickyRowsCount: 1 },
+    { sheet: 'Resumen', data: resumen, columns: [{ width: 26 }, { width: 30 }] },
+  ]).toFile(`reporte_practicas_${new Date().toLocaleDateString('en-CA')}.xlsx`); // AAAA-MM-DD en hora local
+}
+
 /** Colores y nombres de cada estado de la práctica, en el orden del proceso (RF05). */
 const ETAPAS = [['asignado', 'Asignado'], ['en_curso', 'En curso'], ['evaluado', 'Evaluado'], ['calificado', 'Calificado'], ['finalizado', 'Finalizado']];
 const ORDEN = { avance: 'Mayor avance', nombre: 'Nombre (A-Z)', nota: 'Mejor nota', rezagados: 'Menor avance' };
@@ -336,7 +403,10 @@ function Reportes() {
   const avance = Math.round(promedio(delEstado.map((f) => Math.min(100, f.avance_pct))) ?? 0);
   const notas = delEstado.map((f) => Number(f.nota_final)).filter((n) => f_valida(n));
   const notaProm = promedio(notas);
-  const exportar = () => descargar('/reportes/asignaciones?formato=csv' + (estado ? `&estado=${estado}` : ''), 'reporte_practicas.csv').catch((e) => avisar('error', e.message));
+  const exportarCsv = () => descargar('/reportes/asignaciones?formato=csv' + (estado ? `&estado=${estado}` : ''), 'reporte_practicas.csv')
+    .then(() => avisar('ok', 'CSV descargado.')).catch((e) => avisar('error', e.message));
+  const exportarExcel = () => excelReporte(filas, { estado, busqueda: filtros.valores.q, horas, horasReq, avance, notaProm })
+    .then(() => avisar('ok', 'Excel descargado.')).catch((e) => avisar('error', 'No se pudo generar el Excel: ' + e.message));
 
   return (
     <>
@@ -347,7 +417,11 @@ function Reportes() {
             <h3>Reporte de prácticas</h3>
             <p className="gris">Corte al {new Date().toLocaleDateString('es-CO', { dateStyle: 'long' })} · {estado ? `Estado: ${ETAPAS.find(([k]) => k === estado)[1]}` : 'Todos los estados'}</p>
           </div>
-          <button className="sec" onClick={exportar}>⬇ Exportar CSV</button>
+          <MenuDescarga opciones={[
+            { icono: '📊', titulo: 'Excel (.xlsx)', detalle: 'Lo que ve en pantalla (estado, búsqueda y orden), con formato y una hoja de resumen.', accion: exportarExcel, disabled: !filas.length },
+            { icono: '🧾', titulo: 'CSV', detalle: 'Datos sin formato del estado elegido, para otros sistemas o análisis.', accion: exportarCsv },
+            { icono: '🖨️', titulo: 'Imprimir o guardar como PDF', detalle: 'Abre la impresión; elija «Guardar como PDF» como impresora.', accion: () => window.print() },
+          ]} />
         </div>
         {rep.error && <p className="aviso error">{rep.error}</p>}
 
@@ -402,10 +476,10 @@ function Reportes() {
           })}
         </div>
         {!rep.datos && !rep.error && <p className="gris">Cargando…</p>}
-        {rep.datos && todas.length === 0 && <div className="vacio"><span>📭</span><p>Todavía no hay prácticas asignadas.</p></div>}
+        {rep.datos && todas.length === 0 && <EstadoVacio titulo="Todavía no hay prácticas asignadas.">Asigne prácticas desde «Solicitudes» y aquí verá su avance.</EstadoVacio>}
         {todas.length > 0 && filas.length === 0 && <div className="vacio"><span>🔎</span><p>Ninguna práctica coincide con el filtro.</p>
           <button className="sec" onClick={() => { setEstado(''); filtros.limpiar(); }}>Limpiar filtros</button></div>}
-        <p className="gris reporte-pie">Las horas solo cuentan sesiones validadas por el tutor. El CSV exportado respeta el estado elegido.</p>
+        <p className="gris reporte-pie">Las horas solo cuentan sesiones validadas por el tutor. «Descargar reporte» ofrece Excel (lo que ve en pantalla), CSV (estado elegido) e impresión o PDF.</p>
       </section>
     </>
   );

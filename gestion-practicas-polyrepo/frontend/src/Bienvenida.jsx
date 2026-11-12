@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Ilustracion from './Ilustracion.jsx';
 
 /** Qué hace cada rol, en una frase. Se muestra en la bienvenida. */
 const RESUMEN = {
@@ -39,6 +40,7 @@ export default function Bienvenida({ usuario, menu = [] }) {
   return (
     <div className="modal-fondo" onClick={(e) => e.target === e.currentTarget && cerrar()}>
       <div className="modal bienvenida" role="dialog" aria-modal="true" aria-labelledby="bienvenida-titulo">
+        <Ilustracion tipo="bienvenida" className="bienvenida-arte" />
         <p className="bienvenida-rol">{usuario.rol}</p>
         <h3 id="bienvenida-titulo">{saludo()}, {nombre} 👋</h3>
         <p>{RESUMEN[usuario.rol] || 'Bienvenido al sistema de Gestión de Prácticas Académicas.'}</p>

@@ -244,14 +244,25 @@ async function armarBitacora(req, estudianteId) {
   const sesiones = await Sesion.find(filtro).sort({ fecha_sesion: -1 }).lean();
   let calificacion = null; // consistencia eventual: si Evaluación no responde, la bitácora igual se muestra
   try { calificacion = await llamar(urls.evaluacion, `/api/v1/calificaciones/${asg.id}`, { token: req.token }); } catch { /* sin calificación aún */ }
-  // Las notas por sesión solo existen para el estudiante cuando el docente ya publicó la nota final
-  const notas = Object.fromEntries((calificacion?.sesiones || []).map((n) => [n.sesion_id, n]));
+  // El estudiante ve las notas por sesión cuando el docente publica la nota final.
+  // El docente y el director las ven desde que se califica cada actividad (vienen de la evaluación en curso).
+  let notasSesion = calificacion?.sesiones || [];
+  if (!calificacion && ['docente', 'director'].includes(req.usuario.rol)) {
+    try { notasSesion = (await llamar(urls.evaluacion, `/api/v1/evaluaciones/${asg.id}`, { token: req.token })).notas_sesion || []; } catch { /* sin notas aún */ }
+  }
+  const notas = Object.fromEntries(notasSesion.map((n) => [String(n.sesion_id), n]));
+  const conNota = sesiones.filter((s) => notas[String(s._id)]);
+  const sumaNotas = conNota.reduce((t, s) => t + Number(notas[String(s._id)].nota), 0);
+  const validadas = sesiones.filter((s) => ['validada_tutor', 'confirmada_automatica'].includes(s.estado_validacion)).length;
 
   await Bitacora.updateOne({ estudiante_id: estudianteId }, { $set: { estado_general: asg.estado } });
   return {
     estudiante_id: estudianteId, asignacion: asg, estado_general: asg.estado, generado: new Date().toISOString(),
     horas_acumuladas: resumen.horas_acumuladas, horas_requeridas: resumen.horas_requeridas,
     sesiones: sesiones.map((s) => ({ ...s, calificacion: notas[String(s._id)] || null })), calificacion: calificacion?.vigente ?? null,
+    // Promedio de las actividades calificadas (1 decimal, igual que el servicio de Evaluación)
+    promedio_sesiones: conNota.length ? Math.round((sumaNotas / conNota.length + 1e-9) * 10) / 10 : null,
+    sesiones_calificadas: conNota.length, sesiones_validadas: validadas,
   };
 }
 

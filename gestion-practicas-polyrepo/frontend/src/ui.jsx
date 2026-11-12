@@ -129,43 +129,61 @@ export const ESTADOS_SESION = [['', 'Todos'], ['borrador', 'Borrador'], ['pendie
 /**
  * Formatos que se pueden VER en la página. Lista cerrada a propósito: HTML, SVG como documento u otros formatos activos
  * NO se abren aquí (podrían ejecutar código dentro del sistema); esos solo se descargan.
+ * Word (.docx) se convierte a texto con formato y se muestra en un marco aislado (sandbox, sin scripts).
  */
 const VISTA = {
-  imagen: { ext: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'], mime: { jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml' } },
+  imagen: { ext: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif'], mime: { jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml' } },
   pdf: { ext: ['pdf'], mime: { pdf: 'application/pdf' } },
+  word: { ext: ['docx'], mime: {} },
   texto: { ext: ['txt', 'csv', 'md', 'json', 'log'], mime: {} },
   video: { ext: ['mp4', 'webm', 'ogv', 'mov'], mime: { mov: 'video/mp4', ogv: 'video/ogg' } },
   audio: { ext: ['mp3', 'wav', 'ogg', 'm4a'], mime: { mp3: 'audio/mpeg', m4a: 'audio/mp4' } },
 };
 const extension = (nombre = '') => (nombre.includes('.') ? nombre.split('.').pop().toLowerCase() : '');
-/** Tipo de vista previa según la extensión del nombre original ('' = no se puede ver, solo descargar). */
-export const tipoVista = (nombre) => {
+/** Formato guardado por el servidor (mime) -> tipo de vista, para archivos cuyo nombre no trae extensión reconocible. */
+const porMime = (m = '') => (m === 'application/pdf' ? 'pdf'
+  : /^image\/(png|jpeg|gif|webp|bmp|avif)$/.test(m) ? 'imagen'
+    : m === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ? 'word'
+      : m === 'text/plain' || m === 'text/csv' ? 'texto' : /^video\/(mp4|webm|ogg)$/.test(m) ? 'video' : /^audio\//.test(m) ? 'audio' : '');
+/** Tipo de vista previa según la extensión del nombre original (o el formato guardado). '' = no se puede ver, solo descargar. */
+export const tipoVista = (nombre, mime) => {
   const ext = extension(nombre);
-  return Object.keys(VISTA).find((k) => VISTA[k].ext.includes(ext)) || '';
+  return Object.keys(VISTA).find((k) => VISTA[k].ext.includes(ext)) || porMime(mime);
 };
-const mimeVista = (tipo, ext) => VISTA[tipo].mime[ext] || `${{ imagen: 'image', video: 'video', audio: 'audio', texto: 'text', pdf: 'application' }[tipo]}/${tipo === 'texto' ? 'plain' : ext}`;
-const ICONO = { imagen: '🖼️', pdf: '📄', texto: '📝', video: '🎬', audio: '🎵', '': '📎' };
+const mimeVista = (tipo, ext, mime) => VISTA[tipo].mime[ext] || (porMime(mime) === tipo ? mime : '')
+  || `${{ imagen: 'image', video: 'video', audio: 'audio', texto: 'text', pdf: 'application' }[tipo]}/${tipo === 'texto' ? 'plain' : ext}`;
+const ICONO = { imagen: '🖼️', pdf: '📄', word: '📘', texto: '📝', video: '🎬', audio: '🎵', '': '📎' };
 const MAX_TEXTO = 200000; // caracteres que se muestran de un archivo de texto
-const leerTexto = (blob) => (blob.text ? blob.text() : new Promise((ok, mal) => {
-  const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => mal(new Error('No se pudo leer el archivo')); r.readAsText(blob);
+const leer = (blob, como) => (como === 'texto' && blob.text ? blob.text() : como === 'bytes' && blob.arrayBuffer ? blob.arrayBuffer() : new Promise((ok, mal) => {
+  const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => mal(new Error('No se pudo leer el archivo'));
+  if (como === 'texto') r.readAsText(blob); else r.readAsArrayBuffer(blob);
 }));
+/** Word -> HTML (librería cargada solo cuando se abre un .docx). El resultado se muestra en un iframe sandbox: nunca ejecuta código. */
+async function wordAHtml(blob) {
+  const { default: mammoth } = await import('mammoth');
+  const { value } = await mammoth.convertToHtml({ arrayBuffer: await leer(blob, 'bytes') });
+  return `<!doctype html><meta charset="utf-8"><style>body{font-family:"Source Sans 3",system-ui,sans-serif;max-width:760px;margin:24px auto;padding:0 28px;color:#1b2230;line-height:1.5}
+img{max-width:100%}table{border-collapse:collapse}td,th{border:1px solid #d9deea;padding:4px 8px}h1,h2,h3{color:#0b3d91}</style>${value || '<p><i>El documento está vacío.</i></p>'}`;
+}
 
 /** Modal que muestra la evidencia dentro de la página. El archivo se pide con el token y se muestra desde memoria. */
 export function VisorEvidencia({ sesionId, evidencia: e, alCerrar }) {
   const nombre = e.nombre_original || e.archivo;
-  const tipo = tipoVista(nombre);
+  const tipo = tipoVista(nombre, e.mime);
   const ruta = `/sesiones/${sesionId}/evidencias/${e.archivo}`;
-  const [estado, setEstado] = useState({ cargando: Boolean(tipo), url: '', texto: '', error: '' });
+  const [estado, setEstado] = useState({ cargando: Boolean(tipo), url: '', texto: '', html: '', error: '' });
 
   useEffect(() => {
     if (!tipo) return undefined;
     let url = ''; let vivo = true;
+    const listo = (d) => vivo && setEstado({ cargando: false, url: '', texto: '', html: '', error: '', ...d });
     obtenerArchivo(ruta).then(async (blob) => {
       if (!vivo) return;
-      if (tipo === 'texto') { const t = await leerTexto(blob); if (vivo) setEstado({ cargando: false, url: '', texto: t, error: '' }); return; }
-      url = URL.createObjectURL(new Blob([blob], { type: mimeVista(tipo, extension(nombre)) }));
-      setEstado({ cargando: false, url, texto: '', error: '' });
-    }).catch((x) => vivo && setEstado({ cargando: false, url: '', texto: '', error: x.message }));
+      if (tipo === 'texto') return listo({ texto: String(await leer(blob, 'texto')) });
+      if (tipo === 'word') return listo({ html: await wordAHtml(blob) });
+      url = URL.createObjectURL(new Blob([blob], { type: mimeVista(tipo, extension(nombre), e.mime) }));
+      return listo({ url });
+    }).catch((x) => listo({ error: x.message || 'No se pudo abrir el archivo' }));
     return () => { vivo = false; if (url) URL.revokeObjectURL(url); };
   }, [ruta]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -176,27 +194,31 @@ export function VisorEvidencia({ sesionId, evidencia: e, alCerrar }) {
   }, [alCerrar]);
 
   const bajar = () => descargar(ruta, nombre).catch((x) => setEstado((s) => ({ ...s, error: x.message })));
-  const { cargando, url, texto, error } = estado;
+  const { cargando, url, texto, html, error } = estado;
   return (
     <div className="modal-fondo" onClick={(ev) => ev.target === ev.currentTarget && alCerrar()}>
       <div className="modal visor" role="dialog" aria-modal="true" aria-label={`Vista previa de ${nombre}`}>
         <div className="visor-cab">
           <b title={nombre}>{ICONO[tipo]} {nombre}</b>
           <span>
+            {url && ['pdf', 'imagen', 'video'].includes(tipo) && <a className="boton sec" href={url} target="_blank" rel="noopener noreferrer">↗ Abrir en otra pestaña</a>}
             <button className="sec" onClick={bajar}>⬇ Descargar</button>
             <button className="sec" aria-label="Cerrar vista previa" onClick={alCerrar}>✕</button>
           </span>
         </div>
         <div className={'visor-cuerpo visor-' + (tipo || 'otro')}>
-          {cargando && <p className="gris">Abriendo archivo…</p>}
-          {error && <p className="aviso error">{error}</p>}
+          {cargando && <div className="visor-cargando"><span className="girando" aria-hidden="true" /> Abriendo archivo…</div>}
+          {error && <div className="visor-nada"><span>⚠️</span><p><b>No se pudo mostrar el archivo.</b></p><p className="gris">{error}</p><button onClick={bajar}>⬇ Intentar descargarlo</button></div>}
           {!tipo && <div className="visor-nada"><span>📎</span><p>Este tipo de archivo (<b>.{extension(nombre) || '?'}</b>) no se puede ver en la página.</p>
-            <p className="gris">Descárguelo para abrirlo con el programa correspondiente (Word, Excel, PowerPoint…).</p>
+            <p className="gris">Descárguelo para abrirlo con el programa correspondiente (Excel, PowerPoint, Word antiguo .doc…).</p>
             <button onClick={bajar}>⬇ Descargar archivo</button></div>}
           {url && tipo === 'imagen' && <img src={url} alt={nombre} />}
-          {url && tipo === 'pdf' && <iframe src={url} title={nombre} />}
+          {url && tipo === 'pdf' && <object data={url} type="application/pdf" aria-label={nombre}>
+            <div className="visor-nada"><span>📄</span><p>Su navegador no muestra PDF dentro de la página.</p>
+              <a className="boton" href={url} target="_blank" rel="noopener noreferrer">↗ Abrir el PDF en otra pestaña</a></div></object>}
           {url && tipo === 'video' && <video src={url} controls />}
           {url && tipo === 'audio' && <audio src={url} controls />}
+          {html && <iframe className="visor-word" sandbox="" srcDoc={html} title={nombre} />}
           {tipo === 'texto' && !cargando && !error && <pre>{texto.slice(0, MAX_TEXTO)}{texto.length > MAX_TEXTO && '\n…(archivo recortado; descárguelo para verlo completo)'}</pre>}
         </div>
       </div>
@@ -220,7 +242,7 @@ export function Evidencias({ sesion, alError }) {
           const nombre = e.nombre_original || e.archivo;
           return (
             <li key={e.archivo}>
-              <button type="button" className="link" aria-label={`Ver ${nombre}`} title={tipoVista(nombre) ? 'Ver en la página' : 'Este formato solo se puede descargar'} onClick={() => setAbierta(e)}>{ICONO[tipoVista(nombre)]} {nombre}</button>
+              <button type="button" className="link" aria-label={`Ver ${nombre}`} title={tipoVista(nombre, e.mime) ? 'Ver en la página' : 'Este formato solo se puede descargar'} onClick={() => setAbierta(e)}>{ICONO[tipoVista(nombre, e.mime)]} {nombre}</button>
               <button type="button" className="link evidencia-bajar" aria-label={`Descargar ${nombre}`} title="Descargar" onClick={() => bajar(e)}>⬇</button>
             </li>
           );

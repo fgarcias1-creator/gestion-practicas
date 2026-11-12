@@ -85,6 +85,9 @@ r.post('/evaluaciones', A, requerirRol('tutor'), validar(esquemaEval), asyncHand
   const d = req.body;
   const asg = await asignacionDe(req, d.asignacion_id);
   if (!['en_curso', 'evaluado'].includes(asg.estado)) throw new HttpError(409, 'La práctica no está en un estado evaluable');
+  // Una sola evaluación por práctica: una vez registrada queda guardada y no se puede editar ni reemplazar
+  const { rows: [previa] } = await query('SELECT id FROM evaluaciones_tutor WHERE asignacion_id=$1 LIMIT 1', [d.asignacion_id]);
+  if (previa) throw new HttpError(409, 'La evaluación de desempeño ya fue registrada y no se puede modificar');
   const { rows: [e] } = await query(
     'INSERT INTO evaluaciones_tutor(asignacion_id,tutor_id,disposicion,cumplimiento,observaciones) VALUES($1,$2,$3,$4,$5) RETURNING *',
     [d.asignacion_id, req.usuario.perfil_id, d.disposicion, d.cumplimiento, d.observaciones]);

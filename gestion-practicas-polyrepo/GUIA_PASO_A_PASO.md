@@ -157,7 +157,14 @@ Correo `admin@udi.edu.co` · Contraseña `Practicas2026*`
 ### 4.5 Barra lateral y filtros (para probar)
 - Entre con cada rol y compruebe que el menú de la izquierda cambia: administrador (Usuarios, Instituciones, Programas), director (Solicitudes, Asignaciones, Seguimiento, Instituciones, Reportes), docente (Mis estudiantes), tutor (Mis estudiantes), estudiante (Solicitar práctica, Consultar seguimiento).
 - Al entrar, cada rol ve una **bienvenida** con su nombre, lo que puede hacer y accesos directos a sus opciones (sale una vez por inicio de sesión; «No volver a mostrar» la desactiva para ese usuario en ese navegador).
-- Cuando el estudiante ya tiene práctica asignada, la opción **Solicitar práctica** aparece inhabilitada (🔒) en el menú y en la bienvenida.
+- El menú del estudiante sigue su etapa con candados (🔒): mientras solicita, **Consultar seguimiento** está bloqueada (el estado de la solicitud se ve en *Solicitar práctica*); con la práctica asignada, lo bloqueado es **Solicitar práctica**.
+- **Evidencias:** al pulsar el nombre de un archivo se abre una vista previa en la página (imágenes, PDF, Word .docx, texto, video y audio); ⬇ lo descarga. Excel, PowerPoint y HTML solo se descargan.
+- **Evaluación del tutor:** se registra una sola vez; al pulsar «Registrar evaluación» queda guardada y se muestra en solo lectura (🔒 no editable). El servidor rechaza un segundo registro.
+- **Bitácora (docente y director):** cada actividad calificada muestra su nota (verde ≥ 4, ámbar ≥ 3, rojo < 3) y arriba aparece el **promedio de actividades** junto a horas, avance y nota final. El PDF de la bitácora también incluye el promedio.
+- **Reportes (director) → «Descargar reporte ▾»:**
+  - **Excel (.xlsx):** exactamente lo que se ve en pantalla (estado, búsqueda y orden), con formato, notas en color y una hoja *Resumen* con los indicadores.
+  - **CSV:** datos sin formato del estado elegido, para otros sistemas. Usa «;» y coma decimal para que Excel en español lo abra en columnas.
+  - **Imprimir o guardar como PDF:** abre la impresión del navegador; en *Destino* elija «Guardar como PDF». Solo se imprime el reporte (sin menú ni botones).
 - En cualquier lista use el cuadro **Buscar** (no distingue tildes ni mayúsculas), las listas desplegables y, donde aparece, **Desde/Hasta**. El texto «Mostrando X de Y» indica cuántos resultados quedan; **Limpiar filtros** los quita.
 
 ## 5. Usuarios demo

@@ -134,7 +134,8 @@ test('Vista previa: el docente VE la evidencia en la página (sin descargarla); 
   await userEvent.click(await screen.findByRole('button', { name: 'Calificar' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Ver informe_semana1.pdf' }));
   const visor = await screen.findByRole('dialog', { name: 'Vista previa de informe_semana1.pdf' });
-  await waitFor(() => expect(visor.querySelector('iframe')?.getAttribute('src')).toBe('blob:vista'));
+  await waitFor(() => expect(visor.querySelector('object')?.getAttribute('data')).toBe('blob:vista'));
+  expect(within(visor).getByRole('link', { name: /Abrir en otra pestaña/ }).getAttribute('href')).toBe('blob:vista');
   expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();             // se ve, no se descarga
   await userEvent.click(within(visor).getByRole('button', { name: 'Cerrar vista previa' }));
   expect(screen.queryByRole('dialog')).toBeNull();
