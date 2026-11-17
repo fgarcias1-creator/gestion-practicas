@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { sesion } from './api.js';
 import Layout from './Layout.jsx';
-import { MENU } from './menu.js';
+import { MENU, rutaInicial } from './menu.js';
 import Login from './pages/Login.jsx';
 import Estudiante from './pages/Estudiante.jsx';
 import Tutor from './pages/Tutor.jsx';
@@ -24,8 +24,9 @@ function Panel() {
   const Vista = PANEL[u.rol];
   const menu = (MENU[u.rol] || []).map((m) => (bloqueadas[m.ruta] ? { ...m, deshabilitada: true, motivo: bloqueadas[m.ruta] } : m));
   const seccion = pathname.split('/')[1];
-  // El estudiante resuelve sus propias redirecciones (flujo Astah); en los demás roles una dirección desconocida lleva a la primera opción.
-  if (u.rol !== 'estudiante' && menu.length && !menu.some((x) => x.ruta === seccion)) return <Navigate to={'/' + menu[0].ruta} replace />;
+  // El estudiante resuelve sus propias redirecciones (flujo Astah); en los demás roles una dirección desconocida (p. ej. al ingresar)
+  // lleva a la página de inicio del rol: el director abre en Reportes, los demás en su primera opción.
+  if (u.rol !== 'estudiante' && menu.length && !menu.some((x) => x.ruta === seccion)) return <Navigate to={'/' + rutaInicial(u.rol)} replace />;
   return <Layout usuario={u} menu={menu}><Vista usuario={u} seccion={seccion} bloquearMenu={setBloqueadas} /></Layout>;
 }
 

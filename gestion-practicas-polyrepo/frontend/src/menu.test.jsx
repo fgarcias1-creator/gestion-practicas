@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import Layout from './Layout.jsx';
-import { MENU } from './menu.js';
+import { MENU, rutaInicial } from './menu.js';
 
 const json = (data) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(data) });
 const etiquetas = (rol) => MENU[rol].map((m) => m.etiqueta);
@@ -74,4 +74,12 @@ test('Bienvenida: «No volver a mostrar» la oculta para ese usuario aun en una 
   await userEvent.click(within(dialogo).getByRole('button', { name: 'Empezar' }));
   unmount(); sessionStorage.clear(); montar();                                          // nuevo inicio de sesión
   expect(screen.queryByRole('dialog', { name: /Ana/ })).toBeNull();
+});
+
+test('Al ingresar, el director abre en Reportes; los demás roles en su primera opción', () => {
+  expect(rutaInicial('director')).toBe('reportes');
+  expect(MENU.director.map((m) => m.ruta)).toContain('reportes');
+  expect(rutaInicial('administrador')).toBe('usuarios');
+  expect(rutaInicial('docente')).toBe('estudiantes');
+  expect(rutaInicial('tutor')).toBe('estudiantes');
 });

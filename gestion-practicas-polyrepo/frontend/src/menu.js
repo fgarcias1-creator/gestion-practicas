@@ -11,3 +11,7 @@ export const MENU = {
     { ruta: 'usuarios', etiqueta: 'Usuarios', icono: '👤' }, { ruta: 'instituciones', etiqueta: 'Instituciones', icono: '🏫' }, { ruta: 'programas', etiqueta: 'Programas', icono: '🎓' },
   ],
 };
+
+/** Página con la que abre el dashboard de cada rol al ingresar. Sin entrada, abre en la primera opción del menú. */
+export const INICIO = { director: 'reportes' };
+export const rutaInicial = (rol) => INICIO[rol] || MENU[rol]?.[0]?.ruta || '';
